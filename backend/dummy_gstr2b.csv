@@ -1,0 +1,6 @@
+GSTIN of Supplier,Trade Name,Invoice Number,Invoice Date,Invoice Value,Taxable Value,IGST,CGST,SGST,Place of Supply,Reverse Charge,HSN Code,Description,Quantity,Unit,Item Taxable Value,Tax Rate,Item CGST,Item SGST,Item IGST
+09AAACR5055K1Z7,Ramesh Traders,RT/2026/0547,08-05-2026,50400,48000,0,4320,4320,09-Uttar Pradesh,N,1905,Bakery products,200,KGS,48000,18,4320,4320,0
+09CCCPG7777N1Z3,Gupta Electronics,GE/26-27/1034,15-05-2026,13440,12000,0,720,720,09-Uttar Pradesh,N,8528,LED Display Unit,1,NOS,12000,12,720,720,0
+09DDDPP6666L1Z1,Patel Brothers,PB/2026/3321,03-05-2026,33600,32000,0,800,800,09-Uttar Pradesh,N,0402,Milk powder & dairy products,400,KGS,32000,5,800,800,0
+09EEEKK5555P1Z9,Kumar General Store,KGS/26/0088,11-05-2026,18900,18000,0,450,450,09-Uttar Pradesh,N,1701,Cane sugar,600,KGS,18000,5,450,450,0
+09FFFSS4444Q1Z7,Singh Oil Mills,SOM/2026/0271,19-05-2026,26250,25000,0,625,625,09-Uttar Pradesh,N,1508,Groundnut oil,250,LTR,25000,5,625,625,0
