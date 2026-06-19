@@ -15,6 +15,7 @@ export type RootStackParamList = {
   LockSetup: undefined;
   WhatsAppDemo: undefined;
   ImsWalkthrough: undefined;
+  EarlyWarning: undefined;
 };
 
 export type TabParamList = {

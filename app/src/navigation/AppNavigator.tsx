@@ -19,6 +19,7 @@ import CompareScreen from '../screens/CompareScreen';
 import LockSetupScreen from '../screens/LockSetupScreen';
 import WhatsAppDemoScreen from '../screens/WhatsAppDemoScreen';
 import ImsWalkthroughScreen from '../screens/ImsWalkthroughScreen';
+import EarlyWarningScreen from '../screens/EarlyWarningScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -66,6 +67,7 @@ export default function AppNavigator() {
         options={{ presentation: 'card', animation: 'slide_from_right' }}
       />
       <Stack.Screen name="ImsWalkthrough" component={ImsWalkthroughScreen} />
+      <Stack.Screen name="EarlyWarning" component={EarlyWarningScreen} />
     </Stack.Navigator>
   );
 }

@@ -229,3 +229,21 @@ export async function checkBlockedCredit(
   return postJson('/api/blocked-credit', payload);
 }
 
+export interface EarlyWarningSupplier {
+  supplier_name: string;
+  supplier_gstin: string;
+  unfiled_count: number;
+  estimated_itc_at_risk: number;
+}
+
+export async function getEarlyWarningList(): Promise<{ suppliers: EarlyWarningSupplier[] }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
+  try {
+    const res = await fetch(`${AI_API_URL}/api/v1/early-warning`, { signal: controller.signal });
+    if (!res.ok) throw new Error('Failed to fetch early warning data');
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}

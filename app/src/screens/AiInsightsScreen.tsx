@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Sparkles, Lightbulb, FileText, WifiOff } from 'lucide-react-native';
+import { Sparkles, Lightbulb, FileText, WifiOff, AlertTriangle, ArrowRight } from 'lucide-react-native';
 import { Text } from '../components/AppText';
 import { colors, typography, spacing, radii, elevation } from '../theme/tokens';
 import { useI18n } from '../i18n/context';
@@ -77,6 +77,28 @@ export default function AiInsightsScreen() {
             </View>
           )}
 
+          {/* Early Warning Banner */}
+          <TouchableOpacity 
+            style={styles.earlyWarningBanner} 
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('EarlyWarning' as never)}
+          >
+            <View style={styles.earlyWarningIcon}>
+              <AlertTriangle size={20} color={colors.severity.blocked} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.earlyWarningTitle}>
+                {lang === 'hi' ? 'GSTR-2A अर्ली वार्निंग' : 'GSTR-2A Early Warning'}
+              </Text>
+              <Text style={styles.earlyWarningSub}>
+                {lang === 'hi' 
+                  ? 'पेंडिंग सप्लायर्स चेक करें जिनकी वजह से ITC ब्लॉक हो सकता है' 
+                  : 'Check pending suppliers that could block your ITC'}
+              </Text>
+            </View>
+            <ArrowRight size={20} color={colors.severity.blocked} />
+          </TouchableOpacity>
+
           {/* Advisory */}
           <View style={styles.sectionHeaderRow}>
             <View style={[styles.sectionIcon, { backgroundColor: colors.accentMuted }]}>
@@ -139,6 +161,25 @@ const styles = StyleSheet.create({
   sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
   sectionIcon: { width: 36, height: 36, borderRadius: 11, justifyContent: 'center', alignItems: 'center' },
   sectionTitle: { ...typography.heading2, color: colors.ink },
+
+  earlyWarningBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: '#FFF0F0',
+    borderRadius: radii.card,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(211, 47, 47, 0.2)',
+  },
+  earlyWarningIcon: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: 'rgba(211, 47, 47, 0.1)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  earlyWarningTitle: { ...typography.bodyBold, color: colors.severity.blocked, marginBottom: 2 },
+  earlyWarningSub: { ...typography.caption, color: colors.severity.blocked, opacity: 0.8 },
 
   card: {
     backgroundColor: colors.surface,
