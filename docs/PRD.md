@@ -82,6 +82,17 @@ Characteristics:
 | 9 | Explicit "this is a recommendation, not an automatic filing action" framing in the UI and in how it's presented to judges | Stakes are real post-April 2026 — must not imply auto-filing |
 | 10 | One honest line of "why" per recommendation | Explainability, at the lighter end of effort |
 
+### Regulatory-derived diagnostic features (added from GST source-document analysis)
+
+These four were derived from the uploaded CBIC circulars/advisories and the source-document analysis, and added at the user's request. Status is `[COUNCIL REC – NOT VALIDATED]` for all four: each is a defensible feature, but none has been agreed into the build scope or sequenced against the verdict-screen-first priority. Two carry accuracy/safety caveats (flagged inline) that must be respected or the feature will give wrong advice. (An earlier "How Much Can I Actually Claim?" calculator and a "What Certificate Do You Need?" advisor were considered and dropped — see Assumptions, Section 11.)
+
+| # | Feature | Source | What it does | Notes / caveats |
+|---|---|---|---|---|
+| 11 | **Permanent vs Recoverable ITC Classifier** | Circular 170/2022 §4.3 | Splits every blocked/reversed rupee into **Lost forever** (Table 4B(1): s.17(5), rule 42, rule 43, rule 38) vs **Recoverable** (Table 4B(2): rule 37 180-day non-payment, s.16(2)(b) goods not received, s.16(2)(c) supplier hasn't paid tax — reclaimable via Table 4A(5)). | Current and accurate. Feeds the verdict screen and monthly summary directly; low marginal cost once reconciliation exists. Natural extension of the recommendation engine. |
+| 12 | **Place of Supply Mismatch Detector** | Circular 170/2022 §4.3(F); GSTR-2B Advisory Q7 | At OCR time, compares supplier-GSTIN state code, the invoice's Place-of-Supply field, and the trader's registered state. Flags the case where supplier and PoS are in the **same** State but the recipient is in a **different** State/UT — ITC is then **not available** (surfaces in GSTR-2B Table 4, reported in GSTR-3B Table 4D(2)). | Current and accurate. Requires OCR to extract the PoS field and supplier-GSTIN state — a new extraction requirement (see TRD). Feeds the recommendation engine. |
+| 13 | **Section 17(5) Blocked-Credit Detector** | ITC Mechanism flyer §F; CGST Act s.17(5) | At OCR time, detects invoice categories on which ITC is blocked by law — restaurant/food & beverage, motor vehicles, club/gym membership, works-contract/construction for own premises, etc. — and warns the trader *before* they claim: "ITC on this ₹4,200 restaurant bill is blocked — don't claim it." | **Accuracy caveat — flag for review, don't assert.** Several 17(5) categories have statutory exceptions ("except under specified circumstances," e.g. motor vehicles used for further supply, insurance obligatory under law). The detector must surface a *caution to verify*, not a definitive "blocked," or it risks telling a trader to forgo ITC they're actually entitled to. Feeds the verdict as a Reject/don't-claim reason. AI-classification task (on-domain for D4). |
+| 14 | **Supplier-Fix Message Generator** | Circular 183/2022 §3 (root-cause taxonomy) | When an invoice is missing/mismatched because of the supplier, classifies the root cause — supplier filed GSTR-3B but not GSTR-1; filed GSTR-1 but omitted the invoice; declared a B2B supply as B2C; used the wrong recipient GSTIN — and **drafts a ready-to-send plain-language message** asking the supplier to file/amend. Closes the loop from "what's wrong" to "here's the fix." | **Drafts only — never auto-sends.** The trader reviews and sends the message themselves, consistent with the recommendation-not-execution principle. Uses only Circular 183's *root-cause taxonomy and resolution actions* (which describe, generally, why mismatches happen) — **not** the certificate/UDIN threshold logic, which was historical-audit-only and has been dropped. Strong LLM-generation showcase; pairs with the WhatsApp channel (stretch). |
+
 ### Stretch (gated — only attempted after MVP core passes a defined build-time checkpoint)
 
 - GSTR-2A-based supplier non-filing early warning (low build cost — reuses already-ingested data).
@@ -102,6 +113,10 @@ Supplier Risk Scoring, Auto-Dispute Generation (or CA-only, later), Cashflow For
 - As a trader, I want the app to tell me whether to Accept, Reject, or Hold an invoice in IMS, with a reason — but I want to make the final call myself; I don't want the app filing anything automatically.
 - As a trader, I want a monthly summary so I can see, at a glance, how much ITC I'm at risk of losing across all my invoices.
 - As a trader, if I don't understand or disagree with a recommendation, I want an easy way to flag that.
+- As a trader, I want blocked ITC split into "lost forever" vs "coming back once you do X," so I know what's worth chasing.
+- As a trader, I want the app to catch a place-of-supply problem from the invoice itself, before I rely on credit that will be blocked.
+- As a trader, I want a warning when an invoice's ITC is blocked by law (like a restaurant bill) before I try to claim it, so I don't get flagged in an audit.
+- As a trader, when an invoice is missing because of my supplier, I want the app to write the message to send them, so I can fix it with one tap instead of working out what to say.
 - As a judge, I want to see a polished landing page and a credible working pipeline (including, if achieved, a believable WhatsApp capture moment) without the demo overstating what's actually built.
 - As a trader whose turnover crosses ₹5 crore, I want to be alerted that e-invoicing now applies to me and shown how to get started — without the app filing or submitting anything to the government on my behalf.
 
@@ -123,6 +138,8 @@ Supplier Risk Scoring, Auto-Dispute Generation (or CA-only, later), Cashflow For
 - GSTR-2B is a **locked monthly snapshot** (generated ~14th of each month), not a live feed.
 - IMS, effective **April 1, 2026**, requires an explicit per-invoice Accept/Reject/Hold action; no action = deemed acceptance; ITC on invoices not reflected in GSTR-2B is hard-blocked.
 - Target persona has limited English proficiency and limited GST-portal literacy — UI and language design must account for this.
+- Section 17(5) blocked categories carry statutory exceptions ("except under specified circumstances"), so the blocked-credit detector must flag invoices *for review* rather than assert ITC is blocked with certainty — otherwise it may steer a trader away from credit they're legally entitled to.
+- The supplier-fix message generator drafts text only; the trader reviews and sends it. The app never sends, files, or executes anything automatically — consistent with the recommendation-not-execution principle.
 - Hackathon time constraints — exact total build-time window is not yet known `[OPEN]`.
 
 ---
@@ -141,6 +158,7 @@ Supplier Risk Scoring, Auto-Dispute Generation (or CA-only, later), Cashflow For
 - `[OPEN]` Who on the team owns watching the build-time checkpoint — unknown.
 - `[OPEN]` Monetisation/pricing narrative for the landing page — unknown.
 - `[OPEN]` Verdict screen content/layout — completely undesigned; flagged twice by the council as priority #1 and not yet started.
+- `[OPEN]` Whether features 11–14 are in the MVP or deferred. Working recommendation (not validated): fold #11 (Permanent vs Recoverable) and #12 (PoS Mismatch) into the core recommendation engine since they're low marginal cost once OCR + reconciliation exist; #13 (17(5) Detector) is core-adjacent but needs a category classifier; #14 (Supplier-Fix Message Generator) pairs with the WhatsApp stretch channel but can ship as a copy-to-clipboard draft even without it.
 - `[OPEN]` **Turnover determination method for the e-invoice eligibility alert.** Confirmed via research (Session 1): there is no free/official way to look up a business's turnover from its GSTIN — the public GST portal's GSTIN search does not expose turnover, and third-party "turnover lookup" APIs are unofficial, paid, and of unverified accuracy. The alert must therefore rely on either (a) self-reported turnover at onboarding, or (b) a running total computed from the trader's own ingested invoices — mechanism not yet chosen.
 
 ---
@@ -151,3 +169,4 @@ Supplier Risk Scoring, Auto-Dispute Generation (or CA-only, later), Cashflow For
 - The Thread 002 feature-priority table and the reconstructed Thread 009 final feature list were treated as the authoritative current feature scope, since no later contradicting list exists in the source document.
 - In-app camera capture was treated as the working default MVP capture mechanism (over WhatsApp-forward or transaction monitoring), since it is the most recent explicit recommendation in the source document and no later thread overturns it — though it is not formally marked `[VALIDATED]`.
 - The council's synthesis that the **core build** should center on a simulated monthly GST data import + OCR + reconciliation + verdict screen (rather than live WhatsApp ingestion) was treated as the working baseline scope, since every later thread builds on top of it without contradicting it.
+- Features 11–14 were sourced directly from the uploaded CBIC circulars/advisories (170/2022, 183/2022, the ITC Mechanism flyer, and the GSTR-2B advisory). The "How Much Can I Actually Claim?" calculator and the "What Certificate Do You Need?" advisor were considered and dropped — the former because the rule 36(4) buffer it relied on was withdrawn from 1 Jan 2022 (leaving the ceiling equal to GSTR-2B, with nothing left to calculate), the latter because Circulars 183/193's certificate logic is historical-audit-only and off-persona. The Supplier-Fix Message Generator reuses only the forward-applicable root-cause taxonomy from Circular 183, not its certificate thresholds.

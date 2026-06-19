@@ -31,12 +31,25 @@ Two distinct surfaces exist:
 [1] Trader invoice capture (in-app camera/upload — input-source-agnostic backend)
         ↓
 [2] OCR + structured extraction of the trader's invoices
+    → also extract Place-of-Supply field + supplier-GSTIN state
+      code (PoS Mismatch Detector, F12)
+    → detect Section 17(5) blocked categories from invoice
+      content — restaurant, motor vehicle, club, etc. (F13)
         ↓
 [3] Matching/reconciliation against the imported GST dataset
+    → PoS Mismatch Detector (F12): supplier & PoS same State
+      but recipient in another State/UT ⇒ ITC blocked
+    → root-cause classification of supplier mismatches feeds
+      the Supplier-Fix Message Generator (F14)
         ↓
 [4] IMS Action Recommendation engine
     → per invoice: Accept / Reject / Hold, plain non-jargon language,
       one-line reason, ₹ ITC impact
+    → Permanent vs Recoverable ITC Classifier (F11): tag each
+      blocked/reversed rupee as "lost forever" vs "recoverable"
+    → Section 17(5) hits surface as a Reject/don't-claim reason (F13)
+    → Supplier-Fix Message Generator (F14): drafts a supplier
+      message for the trader to review + send (never auto-sent)
         ↓
 [5] Verdict screen
     → single-invoice view first, then a simple monthly summary view
@@ -101,8 +114,12 @@ The original framing (Thread 001) proposed an **installable native or PWA mobile
 8. **Explainability/trust layer** — the "I don't understand/disagree" affordance, the one-line "why" per recommendation, and the explicit "recommendation, not auto-filing" framing.
 9. **Action-execution mini-walkthrough** — a small, explicitly-demoed walkthrough (screenshots or short voice narration) for the 3 possible IMS actions only, framed in the pitch as a deliberate choice not to auto-file (since ITC stakes are real and hard-blocked as of April 2026), not as a hidden limitation.
 10. **Validation harness** — 10–15 dummy invoices with deliberately planted, known outcomes, built before the matching logic is written, with expected-vs-actual tracking; any mismatch on a planted case is treated as the highest-priority bug.
-11. *(Stretch)* **GSTR-2A early-warning module** and **WhatsApp bot stub**, as described in Section 2.2.
-12. *(Stretch)* **E-invoice eligibility alert + guide module** — compares tracked/self-reported turnover against the ₹5 crore threshold; on crossing, surfaces an alert and a static informational walkthrough (IRP list, registration steps, deep-link out). No submission/IRN-generation logic — purely informational, no live GST integration. Depends on a turnover-tracking mechanism not yet chosen (see Section 11).
+11. **Permanent vs Recoverable ITC Classifier** — for each blocked/reversed line, tags it "lost forever" (GSTR-3B Table 4B(1): s.17(5), rules 38/42/43) or "recoverable" (Table 4B(2): rule 37 180-day non-payment, s.16(2)(b) goods not received, s.16(2)(c) supplier hasn't paid tax — reclaimable later via Table 4A(5)). Feeds both the per-invoice verdict and the monthly summary. Low marginal cost once reconciliation exists.
+12. **Place-of-Supply (PoS) Mismatch Detector** — at OCR/reconciliation time, compares supplier-GSTIN state code, the invoice PoS field, and the trader's registered state; flags the "supplier & PoS in same State, recipient in another State/UT ⇒ ITC blocked" case (GSTR-2B Table 4 / GSTR-3B Table 4D(2)). Requires the OCR module to extract two fields it otherwise might not (PoS, supplier state) — a new extraction requirement.
+13. **Section 17(5) Blocked-Credit Detector** — at OCR time, classifies whether an invoice falls in a statutorily blocked category (food & beverage/restaurant, motor vehicles, club/gym membership, works-contract/construction for own premises, etc., per flyer §F / CGST Act s.17(5)) and warns the trader before they claim. **Must flag for review, not assert** — several categories have "except under specified circumstances" carve-outs, so a hard "blocked" verdict risks steering the trader away from credit they're entitled to. Best implemented as an LLM/category classifier over OCR'd content (on-domain for D4); feeds the recommendation engine as a Reject/don't-claim reason. (See Section 10, risk 10.)
+14. **Supplier-Fix Message Generator** — when reconciliation attributes a missing/mismatched invoice to the supplier, classifies the root cause (supplier filed 3B not GSTR-1; filed GSTR-1 but omitted the invoice; declared B2B as B2C; wrong recipient GSTIN — Circular 183 §3 taxonomy) and **drafts** a ready-to-send plain-language message asking the supplier to file/amend. Output is a draft only — the trader reviews and sends it; the app never auto-sends. Reuses only the forward-applicable root-cause taxonomy, not the historical certificate/UDIN logic. LLM-generation component; pairs with the WhatsApp stretch channel but degrades gracefully to copy-to-clipboard. (See Section 10, risk 11.)
+15. *(Stretch)* **GSTR-2A early-warning module** and **WhatsApp bot stub**, as described in Section 2.2.
+16. *(Stretch)* **E-invoice eligibility alert + guide module** — compares tracked/self-reported turnover against the ₹5 crore threshold; on crossing, surfaces an alert and a static informational walkthrough (IRP list, registration steps, deep-link out). No submission/IRN-generation logic — purely informational, no live GST integration. Depends on a turnover-tracking mechanism not yet chosen (see Section 11).
 
 ---
 
@@ -110,9 +127,9 @@ The original framing (Thread 001) proposed an **installable native or PWA mobile
 
 1. **Input — GST dataset:** a simulated GSTR-2B/2A/IMS-status export (per the Simulation Clause), format described generically in the source as "a PDF/spreadsheet downloadable from the portal" — exact schema not yet pinned down (see Assumptions).
 2. **Input — invoices:** trader-submitted images via in-app camera/upload (WhatsApp images, printed/digital invoices, machine-generated receipts, scanned PDFs are the formats named in the problem statement, though only camera/upload is in the MVP capture path; WhatsApp ingestion is stretch-only).
-3. **Transform — OCR extraction:** raw invoice images → structured invoice records (GSTIN, HSN code, tax breakdown, invoice number, amounts).
-4. **Transform — reconciliation:** structured invoice records matched against the imported GST dataset to identify mismatches (e.g., HSN code errors blocking ITC).
-5. **Transform — recommendation generation:** matched/mismatched results → per-invoice Accept/Reject/Hold recommendation, one-line reason, ₹ ITC impact, in English first.
+3. **Transform — OCR extraction:** raw invoice images → structured invoice records (GSTIN, HSN code, tax breakdown, invoice number, amounts). For the PoS Mismatch Detector (F12), extraction must also capture the **Place-of-Supply field** and the **supplier-GSTIN state code** — confirm both are reliably present/extractable across the heterogeneous formats. The **Section 17(5) Blocked-Credit Detector (F13)** also runs here, classifying the invoice's category from its content.
+4. **Transform — reconciliation:** structured invoice records matched against the imported GST dataset to identify mismatches (e.g., HSN code errors blocking ITC). This stage also runs the **PoS mismatch check (F12)** and, for each blocked/reversed line, the **permanent-vs-recoverable classification (F11)**. Where a mismatch is attributed to the supplier, the **root cause is classified (F14)** to drive the message draft.
+5. **Transform — recommendation generation:** matched/mismatched results → per-invoice Accept/Reject/Hold recommendation, one-line reason, ₹ ITC impact, in English first. A Section 17(5) hit (F13) surfaces here as a Reject/don't-claim reason; a supplier-attributed mismatch additionally produces a **draft supplier message (F14)** for the trader to review and send.
 6. **Transform — localization:** English recommendation content → Bhashini-translated output in the trader's language, verified for GST-specific terms.
 7. **Output — verdict screen:** single-invoice view and monthly summary view, presented to the trader with the explainability/trust affordances attached.
 8. **Output — audit trail:** every recommendation decision (and any trader disagreement/override flag) logged for traceability.
@@ -139,8 +156,9 @@ The original framing (Thread 001) proposed an **installable native or PWA mobile
 Proposed storage: Postgres or SQLite (decision open, pending hosting/team-skill confirmation). Suggested entities, based on the components above:
 
 - **GST dataset snapshot** — the imported dummy GSTR-2B/2A/IMS-status data (one import per simulation run).
-- **Trader invoice records** — raw image reference + OCR-extracted structured fields (GSTIN, HSN code, tax breakdown, invoice number, amounts).
-- **Reconciliation/matching results** — per-invoice match/mismatch status against the GST dataset snapshot.
+- **Trader invoice records** — raw image reference + OCR-extracted structured fields (GSTIN, HSN code, tax breakdown, invoice number, amounts, **Place-of-Supply, supplier-GSTIN state code** — the latter two added for the PoS Mismatch Detector, F12), plus a **17(5) blocked-category flag** (F13).
+- **Reconciliation/matching results** — per-invoice match/mismatch status against the GST dataset snapshot, including a **PoS-mismatch flag (F12)**, a **reversal-bucket tag** ("permanent" / "recoverable", F11) where credit is blocked/reversed, and a **supplier root-cause classification** where the mismatch is supplier-attributed (F14).
+- **Supplier-message drafts** — generated draft text per supplier-attributed mismatch (F14), with a sent/not-sent status; never auto-dispatched.
 - **Recommendation records** — per-invoice Accept/Reject/Hold decision, one-line reason, ₹ ITC impact, language variants.
 - **Audit trail log** — every recommendation decision and any trader override/disagreement (via the "I don't understand/disagree" affordance).
 - **Validation/test fixtures** — the 10–15 planted dummy invoices with known expected outcomes, plus expected-vs-actual tracking for the validation harness.
@@ -178,6 +196,8 @@ No specific schema, field types, or storage volumes were defined in the source m
 7. **Undefined checkpoint mechanics** — the ~70% build-time gate for attempting the WhatsApp stub has not been converted into an actual clock time, and no one has been assigned to own/monitor it.
 8. **Foundational dataset has no owner** — the dummy GSTR-2B/2A/IMS-status dataset (Section 2.1, step [0]) is unbuilt and unassigned, despite every downstream component depending on it.
 9. **Multilingual quality for domain-specific terms** — Bhashini's general-purpose translation quality for GST-specific jargon has not been verified; a dedicated verification pass is planned but not yet executed.
+10. **Section 17(5) false-positive risk (F13)** — many blocked categories have "except under specified circumstances" exceptions (motor vehicles for further supply, obligatory insurance, works-contract as input to further works-contract, etc.). A detector that asserts "blocked" with certainty could steer a trader away from ITC they're legally entitled to. Must present a *flag-for-review* with the relevant carve-out noted, not a hard verdict; classifier accuracy on edge categories is unverified.
+11. **Supplier-message accuracy / relationship risk (F14)** — a mis-classified root cause could generate a message that blames the wrong party (e.g., chasing a supplier when the gap is the trader's own data error) or asks for the wrong correction, damaging trader–supplier relationships or sending incorrect information. The draft must always be trader-reviewed before sending (never auto-dispatched), and root-cause classification reliability needs validation against the planted test cases.
 
 ---
 
@@ -193,6 +213,8 @@ No specific schema, field types, or storage volumes were defined in the source m
 - **Final accuracy-validation methodology** — beyond the 10–15 planted dummy invoices, how mismatches/edge cases will be scored and what threshold constitutes "passing."
 - **Exact format/schema of the Simulation Clause dataset** — referenced only generically as "a PDF/spreadsheet downloadable from the portal"; specific fields and file format are not pinned down.
 - **OCR engine choice** — self-hosted (PaddleOCR) vs. vision-capable LLM API; both proposed, no decision made.
+- **Reliable extraction of PoS + supplier-state fields (F12), and 17(5) category classification (F13)** — whether the chosen OCR path can dependably read the PoS/supplier-state fields and infer the blocked-credit category across WhatsApp photos, scanned PDFs, and machine receipts, or whether some must be inferred from the matched GST dataset instead.
+- **Whether features 11–14 are MVP or deferred.** Working recommendation: F11 (Permanent vs Recoverable) and F12 (PoS Mismatch) into the core engine; F13 (17(5) Detector) core-adjacent, gated on classifier accuracy; F14 (Supplier-Fix Message Generator) ships as a copy-to-clipboard draft in the MVP and graduates to one-tap send if the WhatsApp stretch channel lands.
 - **Turnover-tracking mechanism for the e-invoice eligibility alert** — self-reported at onboarding vs. a running total computed from ingested invoices vs. both; not yet chosen. No free/official GSTIN→turnover lookup exists (confirmed via research, Session 1), so this cannot be solved by an external API call.
 
 ---
