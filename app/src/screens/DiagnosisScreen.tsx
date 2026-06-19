@@ -9,6 +9,7 @@ import {
   Platform,
   Modal,
   Pressable,
+  Linking,
 } from 'react-native';
 import { Text } from '../components/AppText';
 import * as Clipboard from 'expo-clipboard';
@@ -37,6 +38,9 @@ import {
   ShieldAlert,
   ChevronDown,
   ChevronUp,
+  Check,
+  Pause,
+  X,
 } from 'lucide-react-native';
 import { useNavigation, CommonActions } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -49,6 +53,7 @@ import { useSession } from '../data/contexts/session-context';
 import { useProfile } from '../data/contexts/profile-context';
 import { RootStackParamList } from '../navigation/types';
 import AnimatedCard from '../components/AnimatedCard';
+import GradientButton from '../components/GradientButton';
 import ItcHealthCard from '../components/ItcHealthCard';
 import { sendWhatsApp, exportCsv, exportPdf } from '../utils/share';
 import { speak, stopSpeaking } from '../utils/speech';
@@ -114,12 +119,13 @@ const IMS_COLORS: Record<ImsAction, { bg: string; text: string }> = {
   HOLD:           { bg: colors.severity.pendingBg,  text: colors.severity.pending },
   REJECT:         { bg: colors.severity.blockedBg,  text: colors.severity.blocked },
   NOT_ON_IMS_YET: { bg: colors.surfaceRaised,       text: colors.inkMuted },
-  VERIFY:         { bg: '#0A0F1A',                  text: '#3B82F6' },
+  VERIFY:         { bg: colors.accentMuted,           text: colors.primary },
 };
 
 function ActionBadge({ action, lang }: { action: ImsAction; lang: 'hi' | 'en' }) {
   const { t } = useI18n();
-  const { bg, text } = IMS_COLORS[action];
+  const colorCfg = action && IMS_COLORS[action] ? IMS_COLORS[action] : { bg: colors.surfaceRaised, text: colors.inkMuted };
+  const { bg, text } = colorCfg;
   const label =
     action === 'ACCEPT'         ? t.diagnosis.imsAccept
     : action === 'HOLD'         ? t.diagnosis.imsHold
@@ -274,7 +280,9 @@ function IssueCard({ result, lang }: { result: DiagnosisResult; lang: 'hi' | 'en
   };
 
   return (
-    <View style={[styles.card, { borderLeftColor: color }]}>
+    <View style={styles.card}>
+      <View style={[styles.cardTonalStripe, { backgroundColor: color }]} />
+      <View style={{ padding: spacing.md }}>
       {/* Header row: icon chip + badge */}
       <View style={styles.cardHeader}>
         <View style={[styles.iconChip, { backgroundColor: severityBg(result.severity) }]}>
@@ -356,13 +364,7 @@ function IssueCard({ result, lang }: { result: DiagnosisResult; lang: 'hi' | 'en
         </Text>
       )}
 
-      {/* Action box */}
-      {result.severity !== 'resolved' && (
-        <View style={[styles.actionBox, { backgroundColor: severityBg(result.severity) }]}>
-          <ArrowRight size={16} color={color} style={{ marginTop: 2 }} />
-          <Text style={styles.actionText}>{action}</Text>
-        </View>
-      )}
+
 
       {/* F13 Blocked Credit Caution Strip */}
       {result.s17_5 && <S17CautionStrip s17={result.s17_5} />}
@@ -390,6 +392,7 @@ function IssueCard({ result, lang }: { result: DiagnosisResult; lang: 'hi' | 'en
       {result.severity !== 'resolved' && (
         <DisagreeButton resultId={result.id} lang={lang} />
       )}
+      </View>
     </View>
   );
 }
@@ -412,6 +415,8 @@ export default function DiagnosisScreen() {
 
   const [einvoiceAlert, setEinvoiceAlert] = useState<EInvoiceAlertData | null>(null);
   const [alertDismissed, setAlertDismissed] = useState(false);
+  const [filter, setFilter] = useState<'all' | 'resolved' | 'pending' | 'blocked'>('all');
+  const filteredResults = filter === 'all' ? results : results.filter((r) => r.severity === filter);
 
   useEffect(() => {
     const EINVOICE_THRESHOLD = 50000000; // ₹5 crore
@@ -525,53 +530,58 @@ export default function DiagnosisScreen() {
     <View style={styles.container}>
       {/* Dark surface hero summary — replaces LinearGradient */}
       <View style={styles.hero}>
+        <View style={styles.heroBgBlob} />
         <SafeAreaView edges={['top']}>
           <View style={styles.heroRow}>
             <TouchableOpacity onPress={handleBack} style={styles.backButton} hitSlop={8}>
               <ChevronLeft size={22} color={colors.ink} />
             </TouchableOpacity>
-            <Text style={[styles.heroLabel, { flex: 1 }]}>
-              {lang === 'hi' ? 'इस महीने अटकी ITC' : 'ITC blocked this month'}
+            <Text style={[styles.heroLabel, { flex: 1, textTransform: 'uppercase', letterSpacing: 1 }]}>
+              {period}
             </Text>
             <TouchableOpacity onPress={handleExportMenu} style={styles.shareButton}>
               <Share2 size={18} color={colors.ink} />
             </TouchableOpacity>
           </View>
 
-          {/* BUG-001: show blocked and pending separately */}
-          <Text style={[styles.heroAmount, { color: heroSeverityColor }]}>
-            {formatRupee(summary.totalBlocked)}
+          <Text style={styles.heroTitle}>
+            {lang === 'hi' ? 'आपके इनवॉइस, समीक्षित' : 'Your invoices, reviewed'}
           </Text>
-          {summary.totalPending > 0 && (
-            <Text style={styles.heroPending}>
-              {lang === 'hi'
-                ? `+ ${formatRupee(summary.totalPending)} follow-up में`
-                : `+ ${formatRupee(summary.totalPending)} needs follow-up`}
-            </Text>
-          )}
 
           {/* Breakdown pills */}
           <View style={styles.pillRow}>
-            {blockedCount > 0 && (
-              <View style={styles.pill}>
-                <Text style={styles.pillText}>
-                  {blockedCount} {lang === 'hi' ? 'अटकी' : 'blocked'}
-                </Text>
-              </View>
-            )}
-            {pendingCount > 0 && (
-              <View style={styles.pill}>
-                <Text style={styles.pillText}>
-                  {pendingCount} {lang === 'hi' ? 'follow-up' : 'follow-up'}
-                </Text>
-              </View>
-            )}
-            <View style={styles.pill}>
-              <Text style={styles.pillText}>
-                {summary.resolvedCount} {lang === 'hi' ? 'सही' : 'matched'}
-              </Text>
+            <View style={[styles.pill, { backgroundColor: colors.severity.resolvedBg, borderColor: 'rgba(34,197,94,0.3)' }]}>
+              <Text style={[styles.pillCount, { color: colors.severity.resolved }]}>{summary.resolvedCount}</Text>
+              <Text style={[styles.pillText, { color: colors.severity.resolved }]}>{lang === 'hi' ? 'स्वीकार' : 'Accept'}</Text>
+            </View>
+            <View style={[styles.pill, { backgroundColor: colors.severity.pendingBg, borderColor: 'rgba(245,158,11,0.3)' }]}>
+              <Text style={[styles.pillCount, { color: colors.severity.pending }]}>{pendingCount}</Text>
+              <Text style={[styles.pillText, { color: colors.severity.pending }]}>{lang === 'hi' ? 'होल्ड' : 'Hold'}</Text>
+            </View>
+            <View style={[styles.pill, { backgroundColor: colors.severity.blockedBg, borderColor: 'rgba(239,68,68,0.3)' }]}>
+              <Text style={[styles.pillCount, { color: colors.severity.blocked }]}>{blockedCount}</Text>
+              <Text style={[styles.pillText, { color: colors.severity.blocked }]}>{lang === 'hi' ? 'अस्वीकार' : 'Reject'}</Text>
             </View>
           </View>
+
+          {/* Filter Tabs */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+            <TouchableOpacity onPress={() => setFilter('all')} style={[styles.filterTab, filter === 'all' && styles.filterTabActive]}>
+              <Text style={[styles.filterTabText, filter === 'all' && styles.filterTabTextActive]}>{lang === 'hi' ? 'सभी' : 'All'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setFilter('resolved')} style={[styles.filterTab, filter === 'resolved' && { backgroundColor: colors.ink, borderColor: colors.ink }]}>
+              <Text style={[styles.filterTabText, filter === 'resolved' && { color: colors.surface }]}>{lang === 'hi' ? 'स्वीकार' : 'Accept'}</Text>
+              <Text style={[styles.filterTabCount, filter === 'resolved' && { color: colors.surface }]}>{summary.resolvedCount}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setFilter('pending')} style={[styles.filterTab, filter === 'pending' && { backgroundColor: colors.ink, borderColor: colors.ink }]}>
+              <Text style={[styles.filterTabText, filter === 'pending' && { color: colors.surface }]}>{lang === 'hi' ? 'होल्ड' : 'Hold'}</Text>
+              <Text style={[styles.filterTabCount, filter === 'pending' && { color: colors.surface }]}>{pendingCount}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setFilter('blocked')} style={[styles.filterTab, filter === 'blocked' && { backgroundColor: colors.ink, borderColor: colors.ink }]}>
+              <Text style={[styles.filterTabText, filter === 'blocked' && { color: colors.surface }]}>{lang === 'hi' ? 'अस्वीकार' : 'Reject'}</Text>
+              <Text style={[styles.filterTabCount, filter === 'blocked' && { color: colors.surface }]}>{blockedCount}</Text>
+            </TouchableOpacity>
+          </ScrollView>
         </SafeAreaView>
       </View>
 
@@ -656,7 +666,13 @@ export default function DiagnosisScreen() {
           </AnimatedCard>
         )}
 
-        {results.map((result, idx) => (
+        {filteredResults.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyCardText}>
+              {lang === 'hi' ? 'इस फ़िल्टर में कोई इनवॉइस नहीं' : 'No invoices in this filter'}
+            </Text>
+          </View>
+        ) : filteredResults.map((result, idx) => (
           <AnimatedCard key={result.id} index={idx}>
             <IssueCard result={result} lang={lang} />
           </AnimatedCard>
@@ -722,6 +738,27 @@ export default function DiagnosisScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Sticky Bottom Bar */}
+      <View style={styles.bottomBar}>
+        <View style={styles.bottomBarInner}>
+          <View style={styles.bottomSummaryRow}>
+            <View style={[styles.bottomSummaryBox, { backgroundColor: colors.severity.resolvedBg, borderColor: 'rgba(34,197,94,0.3)' }]}>
+              <Text style={[styles.bottomSummaryLabel, { color: colors.severity.resolved }]}>{lang === 'hi' ? 'सुरक्षित ITC' : 'ITC Safe'}</Text>
+              <Text style={[styles.bottomSummaryValue, { color: colors.severity.resolved }]}>{formatRupee(summary.totalResolved)}</Text>
+            </View>
+            <View style={[styles.bottomSummaryBox, { backgroundColor: colors.severity.pendingBg, borderColor: 'rgba(245,158,11,0.3)' }]}>
+              <Text style={[styles.bottomSummaryLabel, { color: colors.severity.pending }]}>{lang === 'hi' ? 'जोखिम में ITC' : 'ITC at Risk'}</Text>
+              <Text style={[styles.bottomSummaryValue, { color: colors.severity.pending }]}>{formatRupee(summary.totalBlocked + summary.totalPending)}</Text>
+            </View>
+          </View>
+          <GradientButton
+            label={lang === 'hi' ? 'GST फाइलिंग के लिए आगे बढ़ें' : 'Proceed to GST Filing'}
+            onPress={() => Linking.openURL('https://gst.gov.in')}
+            style={{ width: '100%' }}
+          />
+        </View>
+      </View>
     </View>
   );
 }
@@ -1051,4 +1088,26 @@ const styles = StyleSheet.create({
   cautionExplanation: { color: colors.severity.pending, fontSize: 13, lineHeight: 18 },
   caVerifyBox: { backgroundColor: colors.surfaceRaised, padding: 10, borderRadius: 6, borderWidth: 1, borderColor: colors.severity.pendingDark },
   caVerifyText: { color: colors.severity.pending, fontSize: 13, fontWeight: '600' },
+
+  heroBgBlob: { position: 'absolute', top: -80, left: -60, width: 240, height: 240, borderRadius: 120, backgroundColor: '#C8DFC4', opacity: 0.35, zIndex: -1 },
+  heroTitle: { fontSize: 32, fontWeight: '800', color: colors.ink, marginTop: spacing.md, lineHeight: 38 },
+  pillCount: { fontSize: 16, fontWeight: '800' },
+  filterRow: { paddingHorizontal: spacing.sm, gap: spacing.sm, paddingTop: spacing.md, paddingBottom: spacing.sm },
+  filterTab: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 8, borderRadius: radii.full, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  filterTabActive: { backgroundColor: colors.ink, borderColor: colors.ink },
+  filterTabText: { fontSize: 14, fontWeight: '600', color: colors.inkMuted },
+  filterTabTextActive: { color: colors.surface },
+  filterTabCount: { fontSize: 14, fontWeight: '700', color: colors.inkMuted },
+  emptyCard: { padding: spacing.xl, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderRadius: radii.card, borderWidth: 1, borderColor: colors.border },
+  emptyCardText: { fontSize: 15, color: colors.inkMuted },
+  bottomBar: { backgroundColor: colors.background, paddingHorizontal: spacing.screenH, paddingTop: spacing.sm, paddingBottom: spacing.lg, position: 'absolute', bottom: 0, left: 0, right: 0 },
+  bottomBarInner: { backgroundColor: colors.surface, borderRadius: radii.card, padding: spacing.md, borderWidth: 1, borderColor: colors.border, ...elevation.card },
+  bottomSummaryRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
+  bottomSummaryBox: { flex: 1, borderRadius: radii.card, padding: spacing.sm, borderWidth: 1 },
+  bottomSummaryLabel: { fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
+  bottomSummaryValue: { fontSize: 16, fontWeight: '800' },
+  cardTonalStripe: { height: 4, width: '100%' },
+  actionOverrideRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: spacing.md },
+  actionButtonsWrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  actionOverrideBtn: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceRaised, justifyContent: 'center', alignItems: 'center' },
 });

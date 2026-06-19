@@ -189,5 +189,7 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.inkMuted,
     fontWeight: '500',
+    width: '100%',
+    textAlign: 'center',
   },
 });

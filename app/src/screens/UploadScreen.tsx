@@ -30,6 +30,7 @@ import {
   TrendingDown,
   Zap,
   ScanSearch,
+  TrendingUp,
 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -155,19 +156,19 @@ export default function UploadScreen() {
           <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
             {/* Hero header */}
             <View style={styles.heroSection}>
+              <View style={styles.heroBgBlob} />
               <View style={styles.heroTop}>
-                <Text style={styles.greeting}>{greeting}</Text>
-                <View style={styles.brandBadge}>
-                  <ScanSearch size={18} color={colors.primary} />
+                <View>
+                  <Text style={styles.greeting}>{greeting}</Text>
+                  <Text style={styles.heroTitle}>
+                    {profile?.shopName || 'Sharma Kirana Store'}
+                  </Text>
                 </View>
               </View>
-              <Text style={styles.heroTitle}>
-                {lang === 'hi' ? 'GST जाँच शुरू\nकरें' : "Start your\nGST check"}
-              </Text>
               <Text style={styles.heroSub}>
                 {lang === 'hi'
-                  ? 'Invoices upload करें — ITC कितनी अटकी है, 2 मिनट में पता करें'
-                  : 'Upload invoices — find out how much ITC is blocked in 2 minutes'}
+                  ? 'GST फाइलिंग से पहले अपने इनवॉइस जांचें।'
+                  : "Let's check your invoices before filing GST."}
               </Text>
             </View>
 
@@ -186,7 +187,7 @@ export default function UploadScreen() {
               return (
                 <View style={[styles.deadlineBanner, isUrgent && styles.deadlineBannerUrgent]}>
                   <View style={[styles.deadlineDays, isUrgent && styles.deadlineDaysUrgent]}>
-                    <Text style={[styles.deadlineDaysNum, isUrgent && { color: colors.error }]}>
+                    <Text style={[styles.deadlineDaysNum, isUrgent && { color: colors.severity.blocked }]}>
                       {daysLeft}
                     </Text>
                     <Text style={styles.deadlineDaysLabel}>
@@ -209,24 +210,18 @@ export default function UploadScreen() {
               );
             })()}
 
-            {/* Stats row — returning users */}
+            {/* ITC saved nudge */}
             {totalChecks > 0 && (
-              <View style={styles.statsRow}>
-                <View style={styles.statCard}>
-                  <Text style={[styles.statValue, { color: colors.success }]}>
-                    {formatRupee(totalSaved)}
-                  </Text>
-                  <Text style={styles.statLabel}>{lang === 'hi' ? 'ITC सुरक्षित' : 'ITC safe'}</Text>
+              <View style={styles.itcNudge}>
+                <View style={styles.itcNudgeIconWrap}>
+                  <TrendingUp size={16} color={colors.severity.resolved} strokeWidth={2.5} />
                 </View>
-                <View style={styles.statCard}>
-                  <Text style={[styles.statValue, { color: colors.error }]}>
-                    {formatRupee(totalBlocked)}
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.itcNudgeLabel}>{lang === 'hi' ? 'पिछले महीने' : 'Last month'}</Text>
+                  <Text style={styles.itcNudgeValue}>
+                    {formatRupee(totalSaved)}{' '}
+                    <Text style={styles.itcNudgeValueSub}>{lang === 'hi' ? 'गलतियों से बचाया गया ITC' : 'ITC saved from errors'}</Text>
                   </Text>
-                  <Text style={styles.statLabel}>{lang === 'hi' ? 'ITC अटकी' : 'ITC blocked'}</Text>
-                </View>
-                <View style={styles.statCard}>
-                  <Text style={[styles.statValue, { color: colors.ink }]}>{totalChecks}</Text>
-                  <Text style={styles.statLabel}>{lang === 'hi' ? 'जाँचें' : 'checks'}</Text>
                 </View>
               </View>
             )}
@@ -244,12 +239,12 @@ export default function UploadScreen() {
                     {
                       num: '2',
                       text: lang === 'hi' ? 'Invoices जोड़ें (photo/file)' : 'Add invoices (photo/file)',
-                      icon: <Camera size={14} color={colors.warning} />,
+                      icon: <Camera size={14} color={colors.severity.pending} />,
                     },
                     {
                       num: '3',
                       text: lang === 'hi' ? 'ITC कितनी अटकी, तुरंत पता' : 'Instantly see blocked ITC',
-                      icon: <Zap size={14} color={colors.success} />,
+                      icon: <Zap size={14} color={colors.severity.resolved} />,
                     },
                   ].map((step) => (
                     <View key={step.num} style={styles.onboardStep}>
@@ -279,18 +274,44 @@ export default function UploadScreen() {
               </TouchableOpacity>
             )}
 
-            {/* Section label */}
-            <Text style={styles.sectionLabel}>
-              {lang === 'hi' ? 'अपलोड करें' : 'UPLOAD'}
-            </Text>
+            {/* Progress tracker */}
+            <View style={styles.progressTracker}>
+              <View style={styles.progressStep}>
+                <View style={[styles.progressDot, hasGstr2b ? styles.progressDotDone : styles.progressDotActive]}>
+                  {hasGstr2b ? <CheckCircle size={14} color="#FFF" /> : <Text style={[styles.progressDotNum, hasGstr2b ? { color: '#FFF' } : {}]}>1</Text>}
+                </View>
+                <Text style={[styles.progressLabel, hasGstr2b ? styles.progressLabelDone : styles.progressLabelActive]}>
+                  {lang === 'hi' ? 'GSTR-2B' : 'GSTR-2B'}
+                </Text>
+              </View>
+              <View style={styles.progressTrack}>
+                <View style={[styles.progressFill, { width: hasGstr2b ? '100%' : '0%' }]} />
+              </View>
+              <View style={styles.progressStep}>
+                <View style={[styles.progressDot, hasInvoices ? styles.progressDotDone : hasGstr2b ? styles.progressDotActive : styles.progressDotMuted]}>
+                  {hasInvoices ? <CheckCircle size={14} color="#FFF" /> : <Text style={[styles.progressDotNum, (!hasInvoices && !hasGstr2b) ? { color: colors.inkMuted } : {}]}>2</Text>}
+                </View>
+                <Text style={[styles.progressLabel, hasInvoices ? styles.progressLabelDone : hasGstr2b ? styles.progressLabelActive : styles.progressLabelMuted]}>
+                  {lang === 'hi' ? 'इनवॉइस' : 'Invoices'}
+                </Text>
+              </View>
+            </View>
 
             {/* Step 1: GSTR-2B */}
-            <View style={styles.stepRow}>
-              <View style={styles.stepNum}><Text style={styles.stepNumText}>1</Text></View>
-              <Text style={styles.stepTitle}>
-                {lang === 'hi' ? 'GSTR-2B अपलोड करें' : 'Upload GSTR-2B'}
-              </Text>
-            </View>
+            <View style={[styles.stepCard, hasGstr2b && styles.stepCardDone]}>
+              <View style={styles.stepRowInner}>
+                <View style={[styles.stepIconWrap, hasGstr2b ? {backgroundColor: 'rgba(42,92,50,0.15)'} : {backgroundColor: colors.surfaceRaised}]}>
+                  {hasGstr2b ? <CheckCircle size={16} color={colors.severity.resolved} /> : <Text style={styles.stepNumTextInner}>1</Text>}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.stepTitleInner, hasGstr2b && {color: colors.severity.resolved}]}>
+                    {lang === 'hi' ? 'अपना GSTR-2B अपलोड करें' : 'Upload your GSTR-2B'}
+                  </Text>
+                  <Text style={styles.stepSubInner}>
+                    {lang === 'hi' ? 'GST पोर्टल से CSV या Excel फ़ाइल' : 'CSV or Excel from the GST portal'}
+                  </Text>
+                </View>
+              </View>
 
             {session.gstr2bFile ? (
               <View style={styles.fileAccepted}>
@@ -309,47 +330,41 @@ export default function UploadScreen() {
               </View>
             ) : (
               <TouchableOpacity style={styles.uploadZone} activeOpacity={0.8} onPress={pickGstr2b}>
-                <View style={[styles.zoneIcon, { backgroundColor: colors.accentMuted }]}>
-                  <FileSpreadsheet size={22} color={colors.primary} />
+                <View style={{ alignItems: 'center' }}>
+                  <FileSpreadsheet size={24} color={colors.inkMuted} style={{ marginBottom: 8 }} />
+                  <Text style={styles.zoneHint}>{lang === 'hi' ? 'यहाँ टैप करके अपलोड करें' : 'Tap to upload CSV'}</Text>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.zoneLabel}>{t.upload.gstr2bLabel}</Text>
-                  <Text style={styles.zoneHint}>{t.upload.gstr2bHint}</Text>
-                </View>
-                <ArrowRight size={16} color={colors.inkMuted} />
               </TouchableOpacity>
             )}
+            </View>
 
             {/* Step 2: Invoices */}
-            <View style={[styles.stepRow, { marginTop: spacing.lg }]}>
-              <View style={styles.stepNum}><Text style={styles.stepNumText}>2</Text></View>
-              <Text style={styles.stepTitle}>
-                {lang === 'hi' ? 'Invoices जोड़ें' : 'Add invoices'}
-              </Text>
-              {session.invoiceFiles.length > 0 && (
-                <View style={styles.countBadge}>
-                  <Text style={styles.countBadgeText}>{session.invoiceFiles.length}</Text>
+            <View style={[styles.stepCard, hasInvoices && styles.stepCardDone, { marginTop: spacing.md }]}>
+              <View style={styles.stepRowInner}>
+                <View style={[styles.stepIconWrap, hasInvoices ? {backgroundColor: 'rgba(42,92,50,0.15)'} : {backgroundColor: colors.surfaceRaised}]}>
+                  {hasInvoices ? <CheckCircle size={16} color={colors.severity.resolved} /> : <Text style={styles.stepNumTextInner}>2</Text>}
                 </View>
-              )}
-            </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.stepTitleInner, hasInvoices && {color: colors.severity.resolved}]}>
+                    {lang === 'hi' ? 'इनवॉइस फोटो या PDF जोड़ें' : 'Add invoice photos or PDFs'}
+                  </Text>
+                  <Text style={styles.stepSubInner}>
+                    {lang === 'hi' ? 'एक साथ कई फ़ाइलें अपलोड करें' : 'Upload multiple files at once'}
+                  </Text>
+                </View>
+              </View>
 
-            <View style={styles.uploadRow}>
-              <TouchableOpacity style={styles.uploadZoneCompact} activeOpacity={0.8} onPress={pickInvoices}>
-                <View style={[styles.zoneIconSmall, { backgroundColor: colors.severity.resolvedBg }]}>
-                  <FolderOpen size={20} color={colors.severity.resolved} />
-                </View>
-                <Text style={styles.zoneLabelSmall}>{t.upload.invoiceFileLabel}</Text>
-                <Text style={styles.zoneHintSmall}>{t.upload.invoiceFileHint}</Text>
-              </TouchableOpacity>
+            <TouchableOpacity style={styles.uploadZone} activeOpacity={0.8} onPress={pickInvoices}>
+              <View style={{ alignItems: 'center' }}>
+                <FolderOpen size={24} color={colors.inkMuted} style={{ marginBottom: 8 }} />
+                <Text style={styles.zoneHint}>{lang === 'hi' ? 'यहाँ टैप करके अपलोड करें' : 'Tap to upload PDFs or Images'}</Text>
+              </View>
+            </TouchableOpacity>
 
-              <TouchableOpacity style={styles.uploadZoneCompact} activeOpacity={0.8} onPress={() => navigation.navigate('Camera')}>
-                <View style={[styles.zoneIconSmall, { backgroundColor: colors.severity.pendingBg }]}>
-                  <Camera size={20} color={colors.severity.pending} />
-                </View>
-                <Text style={styles.zoneLabelSmall}>{t.upload.invoiceCameraLabel}</Text>
-                <Text style={styles.zoneHintSmall}>{t.upload.invoiceCameraHint}</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity style={styles.scanBtn} activeOpacity={0.8} onPress={() => navigation.navigate('Camera')}>
+              <Camera size={18} color={colors.ink} />
+              <Text style={styles.scanBtnText}>{lang === 'hi' ? 'कैमरे से स्कैन करें' : 'Scan with camera'}</Text>
+            </TouchableOpacity>
 
             {/* Uploaded invoices preview */}
             {hasInvoices && (
@@ -409,6 +424,7 @@ export default function UploadScreen() {
                 )}
               </View>
             )}
+            </View>
 
             <GradientButton
               label={
@@ -439,6 +455,153 @@ export default function UploadScreen() {
 }
 
 const styles = StyleSheet.create({
+  // Hero Blob
+  heroBgBlob: {
+    position: 'absolute',
+    top: -80,
+    right: -60,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: '#C8DFC4',
+    opacity: 0.4,
+    zIndex: -1,
+  },
+  // ITC Nudge
+  itcNudge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.severity.resolvedBg,
+    borderWidth: 1,
+    borderColor: colors.severity.resolvedBg,
+    borderRadius: radii.card,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+    zIndex: 10,
+  },
+  itcNudgeIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(42,92,50,0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  itcNudgeLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.severity.resolved,
+  },
+  itcNudgeValue: {
+    fontSize: 14,
+    fontWeight: '800',
+    fontFamily: 'monospace',
+    color: colors.severity.resolved,
+  },
+  itcNudgeValueSub: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.severity.resolved,
+  },
+  // Progress Tracker
+  progressTracker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.xs,
+  },
+  progressStep: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  progressDot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  progressDotDone: { backgroundColor: colors.severity.resolved },
+  progressDotActive: { backgroundColor: colors.primary },
+  progressDotMuted: { backgroundColor: colors.accentMuted },
+  progressDotCheck: { fontSize: 12, color: '#FFFFFF', fontWeight: '800' },
+  progressDotNum: { fontSize: 12, color: '#FFFFFF', fontWeight: '800' },
+  progressLabel: { fontSize: 12, fontWeight: '600' },
+  progressLabelDone: { color: colors.inkMuted },
+  progressLabelActive: { color: colors.ink },
+  progressLabelMuted: { color: colors.inkMuted },
+  progressTrack: {
+    flex: 1,
+    height: 2,
+    backgroundColor: colors.border,
+    marginHorizontal: 12,
+    borderRadius: 1,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: colors.severity.resolved,
+  },
+  // Step Cards
+  stepCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.card,
+    padding: spacing.md,
+    ...elevation.soft,
+  },
+  stepCardDone: {
+    backgroundColor: colors.severity.resolvedBg,
+    borderColor: 'rgba(42,92,50,0.25)',
+  },
+  stepRowInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  stepIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stepNumTextInner: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.inkMuted,
+  },
+  stepTitleInner: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.ink,
+  },
+  stepSubInner: {
+    fontSize: 12,
+    color: colors.inkMuted,
+    marginTop: 2,
+  },
+  scanBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.full,
+    paddingVertical: 12,
+    marginTop: spacing.md,
+  },
+  scanBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.ink,
+  },
   root: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
   scrollContent: {
@@ -686,11 +849,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: colors.borderHover,
     borderRadius: radii.card,
-    padding: spacing.md,
+    padding: spacing.lg,
+    justifyContent: 'center',
   },
   zoneIcon: {
     width: 44,
@@ -699,8 +864,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  zoneLabel: { fontSize: 15, fontWeight: '600', color: colors.ink },
-  zoneHint: { ...typography.caption, color: colors.inkMuted, marginTop: 2 },
+  zoneLabel: { fontSize: 13, fontWeight: '600', color: colors.ink, textAlign: 'center' },
+  zoneHint: { ...typography.caption, color: colors.inkMuted, marginTop: 2, textAlign: 'center' },
 
   // Upload zones — compact 2-col
   uploadRow: {
@@ -733,17 +898,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: colors.severity.resolvedBg,
-    borderWidth: 1,
-    borderColor: 'rgba(34,197,94,0.25)',
-    borderRadius: radii.card,
-    padding: spacing.md,
+    backgroundColor: 'rgba(42,92,50,0.1)',
+    borderRadius: radii.button,
+    padding: spacing.sm,
   },
   fileAcceptedIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: colors.surfaceRaised,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
   },

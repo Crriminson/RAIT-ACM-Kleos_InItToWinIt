@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
   },
   retryBtnText: { ...typography.bodyBold, color: '#fff' },
   
-  content: { padding: spacing.md, paddingBottom: spacing.xxl },
+  content: { padding: spacing.md, paddingBottom: spacing.xl },
   summaryCard: {
     backgroundColor: colors.severity.blockedBg,
     borderRadius: radii.card,
@@ -132,10 +132,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(211, 47, 47, 0.2)',
   },
   summaryHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: spacing.sm },
-  summaryTitle: { ...typography.heading3, color: colors.severity.blocked },
+  summaryTitle: { ...typography.heading2, color: colors.severity.blocked },
   summaryBody: { ...typography.body, color: colors.ink, lineHeight: 22 },
 
-  sectionTitle: { ...typography.heading3, color: colors.ink, marginBottom: spacing.sm, marginLeft: 4 },
+  sectionTitle: { ...typography.heading2, color: colors.ink, marginBottom: spacing.sm, marginLeft: 4 },
   emptyState: { padding: spacing.xl, alignItems: 'center' },
   emptyText: { ...typography.body, color: colors.inkMuted },
 
@@ -158,11 +158,11 @@ const styles = StyleSheet.create({
   
   riskBadge: {
     alignItems: 'flex-end',
-    backgroundColor: '#FFF0F0',
+    backgroundColor: colors.severity.blockedBg,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: radii.base,
+    borderRadius: radii.md,
   },
-  riskAmount: { ...typography.heading3, color: colors.severity.blocked },
+  riskAmount: { ...typography.heading2, color: colors.severity.blocked },
   riskLabel: { ...typography.caption, color: colors.severity.blocked, opacity: 0.8 },
 });

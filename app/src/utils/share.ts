@@ -120,7 +120,7 @@ export function buildReportHtml(
   period?: string,
 ): string {
   const displayPeriod = period || 'May 2026';
-  const sevColor = (s: string) => (s === 'blocked' ? '#D32F2F' : s === 'pending' ? '#E65100' : '#2E7D32');
+  const sevColor = (s: string) => (s === 'blocked' ? '#7A2419' : s === 'pending' ? '#6B4020' : '#2A5C32');
   const title = lang === 'hi' ? `ITC जाँच रिपोर्ट — ${displayPeriod}` : `ITC Diagnosis Report — ${displayPeriod}`;
   const cards = results
     .map((r) => {
@@ -139,7 +139,7 @@ export function buildReportHtml(
   <style>
     body { font-family: -apple-system, Roboto, sans-serif; padding: 32px; color: #0a0a0a; }
     h1 { font-size: 22px; margin-bottom: 4px; }
-    .sum { background: #045EFE; color: #fff; padding: 18px 20px; border-radius: 14px; margin: 16px 0 24px; }
+    .sum { background: #E8432A; color: #fff; padding: 18px 20px; border-radius: 14px; margin: 16px 0 24px; }
     .sum .big { font-size: 30px; font-weight: 800; }
     .card { border: 1px solid #E5E5E5; border-radius: 14px; padding: 14px 16px; margin-bottom: 12px; }
     .amt { font-size: 24px; font-weight: 800; }
@@ -167,16 +167,12 @@ export async function exportPdf(
   const html = buildReportHtml(results, summary, lang, period);
 
   if (Platform.OS === 'web') {
-    // No native print-to-file on web; open the browser print dialog so the
-    // user can save the report as a PDF.
     printHtmlWeb(html);
     return;
   }
 
-  const { uri } = await Print.printToFileAsync({ html });
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'ITC Report (PDF)' });
-  }
+  // Fallback to native print dialog which has a "Save as PDF" option
+  await Print.printAsync({ html });
 }
 
 // CSV + PDF export now work on every platform (web via download / print dialog).

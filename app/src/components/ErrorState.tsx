@@ -25,7 +25,7 @@ export default function ErrorState({ title, message, retryLabel, onRetry, icon }
       <SafeAreaView style={styles.safe}>
         <View style={styles.content} accessible accessibilityRole="alert">
           <View style={styles.iconCircle}>
-            {icon ?? <AlertTriangle size={40} color={colors.warning} strokeWidth={2} />}
+            {icon ?? <AlertTriangle size={40} color={colors.severity.pending} strokeWidth={2} />}
           </View>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.message}>{message}</Text>

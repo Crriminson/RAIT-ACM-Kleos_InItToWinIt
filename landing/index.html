@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CA in Your Pocket — Understand your GST, recover your ITC</title>
+    <meta name="description"
+        content="An AI tool that reads your invoices and GSTR-2B, finds every blocked Input Tax Credit, and tells you exactly what to do — in plain Hindi. Built for India's 1.4 crore MSMEs." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+    <!-- Nav -->
+    <header class="nav">
+        <div class="container nav-inner">
+            <a class="brand" href="#top">
+                <span class="brand-mark">₹</span>
+                <span class="brand-name">CA in Your Pocket</span>
+            </a>
+            <nav class="nav-links">
+                <a href="#problem">The Problem</a>
+                <a href="#how">How it works</a>
+                <a href="#features">Features</a>
+            </nav>
+            <a href="#try" class="btn btn-primary btn-sm">Try the app</a>
+        </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="hero" id="top">
+        <div class="container hero-grid">
+            <div class="hero-copy">
+                <div class="eyebrow">KLEOS 2026 · AI / ML · D4-PS1</div>
+                <h1 class="hero-title">
+                    <span class="rupee-strike">₹2,400 blocked.</span><br />
+                    You don't know why.<br />
+                    <span class="accent">Your CA does.</span>
+                </h1>
+                <p class="hero-sub">
+                    Every month, small traders lose Input Tax Credit they are legally owed —
+                    because the GST portal never tells them what's wrong. We built the
+                    diagnostic tool that does: it reads your invoices, matches them against
+                    your GSTR-2B, and explains every gap in plain Hindi, with the exact action to take.
+                </p>
+                <div class="hero-cta">
+                    <a href="#try" class="btn btn-primary">See it in action</a>
+                    <a href="#how" class="btn btn-ghost">How it works</a>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat">
+                        <div class="stat-num">1.4 crore</div>
+                        <div class="stat-label">GST-registered MSMEs in India</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-num">₹15k–40k</div>
+                        <div class="stat-label">paid to a CA every month</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-num">500–2,000</div>
+                        <div class="stat-label">invoices a month, by hand</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phone mockup: Diagnosis screen (S4) -->
+            <div class="hero-phone">
+                <div class="phone">
+                    <div class="phone-notch"></div>
+                    <div class="phone-screen">
+                        <div class="app-summary blocked">
+                            <div class="app-summary-amount">₹5,820 अटकी है</div>
+                            <div class="app-summary-meta">3 समस्याएं · 3 सही match</div>
+                        </div>
+                        <div class="app-cards">
+                            <div class="dcard blocked">
+                                <span class="badge badge-blocked">● ITC blocked</span>
+                                <div class="dcard-amount">₹2,700</div>
+                                <div class="dcard-reason">Sharma Supplies ने यह invoice अभी तक file नहीं की।</div>
+                                <div class="dcard-action">Sharma Supplies से कहें कि 14 तारीख से पहले file करें।</div>
+                            </div>
+                            <div class="dcard blocked">
+                                <span class="badge badge-blocked">● ITC blocked</span>
+                                <div class="dcard-amount">₹2,400</div>
+                                <div class="dcard-reason">Ramesh Traders ने गलत HSN कोड लगाया है (1006 → 1905)।</div>
+                                <div class="dcard-action">Ramesh Traders को बोलें कि HSN सही करें।</div>
+                            </div>
+                            <div class="dcard pending">
+                                <span class="badge badge-pending">● Follow-up</span>
+                                <div class="dcard-amount">₹720</div>
+                                <div class="dcard-reason">Tax rate mismatch — invoice 18%, GSTR-2B 12%।</div>
+                            </div>
+                            <div class="dcard resolved">
+                                <span class="badge badge-resolved">● Matched</span>
+                                <div class="dcard-amount">₹1,600</div>
+                                <div class="dcard-reason">Patel Brothers की invoice सही match हो गई।</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="phone-glow"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Problem -->
+    <section class="section problem" id="problem">
+        <div class="container">
+            <div class="section-head">
+                <div class="section-tag">The unstructured data paradox</div>
+                <h2>A real business is messy. GST is rigid. Nobody bridges the gap.</h2>
+            </div>
+            <div class="problem-grid">
+                <div class="problem-card">
+                    <div class="problem-icon">📥</div>
+                    <h3>Invoices arrive everywhere</h3>
+                    <p>WhatsApp photos, printed bills, thermal receipts, scanned PDFs — scattered across 30 days and
+                        dozens of supplier chats.</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-icon">🕳️</div>
+                    <h3>GSTR-2B can't see its own gaps</h3>
+                    <p>If a supplier never files, the entry simply doesn't exist. The portal has no way to flag what's
+                        missing — only the trader's own invoices can.</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-icon">🔒</div>
+                    <h3>The portal won't explain</h3>
+                    <p>It's English-only, built for filing, not diagnosis. It never says <em>why</em> ₹2,400 is stuck or
+                        what to do about it.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How it works -->
+    <section class="section how" id="how">
+        <div class="container">
+            <div class="section-head">
+                <div class="section-tag">One monthly check</div>
+                <h2>Upload once. Get answers in plain Hindi.</h2>
+            </div>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-num">1</div>
+                    <h3>Upload</h3>
+                    <p>Drop in your GSTR-2B export and a batch of invoices — pick from files or snap printed bills with
+                        the camera. One action, like handing a pile to your CA.</p>
+                </div>
+                <div class="step-arrow">→</div>
+                <div class="step">
+                    <div class="step-num">2</div>
+                    <h3>Diagnose</h3>
+                    <p>A multimodal model reads each invoice, matches it to GSTR-2B at line-item and HSN level, and
+                        quantifies every blocked or at-risk rupee.</p>
+                </div>
+                <div class="step-arrow">→</div>
+                <div class="step">
+                    <div class="step-num">3</div>
+                    <h3>Act</h3>
+                    <p>Each issue becomes a card: the amount, the reason, the exact action — plus a ready-to-send
+                        WhatsApp message for the supplier. No CA needed.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section class="section features" id="features">
+        <div class="container">
+            <div class="section-head">
+                <div class="section-tag">What's inside</div>
+                <h2>Built around one test: can a kirana owner act on this alone?</h2>
+            </div>
+            <div class="feature-grid">
+                <div class="feature">
+                    <div class="feature-bar"></div>
+                    <h3>Missing-transaction detection</h3>
+                    <p>Diffs your invoices against GSTR-2B to catch suppliers who never filed — the loss the portal
+                        can't show you.</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-bar"></div>
+                    <h3>HSN &amp; rate mismatch</h3>
+                    <p>Line-item matching surfaces the wrong-HSN and wrong-rate cases that quietly block your credit.
+                    </p>
+                </div>
+                <div class="feature">
+                    <div class="feature-bar"></div>
+                    <h3>Plain-language, ₹-first</h3>
+                    <p>Every issue ranked by rupees lost, explained in Class-10 Hindi — no jargon, no professional
+                        interpretation.</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-bar"></div>
+                    <h3>One-tap supplier message</h3>
+                    <p>Copies a polite, ready-to-forward WhatsApp note so the trader can chase a fix without knowing
+                        what GSTR-2B even is.</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-bar"></div>
+                    <h3>Audit trail you can trust</h3>
+                    <p>Tap any issue to see your invoice side-by-side with GSTR-2B, with the exact mismatched field
+                        highlighted.</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-bar"></div>
+                    <h3>Hindi-first, English-ready</h3>
+                    <p>The whole interface flips between Hindi and English instantly — built for limited-English
+                        comfort.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta" id="try">
+        <div class="container cta-inner">
+            <h2>See the diagnosis for yourself.</h2>
+            <p>Open the prototype, tap <strong>"Demo data से देखें"</strong>, and watch it find ₹5,820 in blocked ITC
+                across a realistic month of invoices.</p>
+            <div class="cta-buttons">
+                <a href="#" class="btn btn-light" id="open-app">Open the app</a>
+                <a href="#how" class="btn btn-ghost-light">See how it works</a>
+            </div>
+            <p class="cta-note">Prototype runs on a team-designed mock dataset per the PS Simulation Clause.</p>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container footer-inner">
+            <div class="footer-brand">
+                <span class="brand-mark">₹</span>
+                <span class="brand-name">CA in Your Pocket</span>
+            </div>
+            <div class="footer-meta">
+                KLEOS 2026 · Domain 04 (AI/ML) · Problem Statement D4-PS1<br />
+                "The CA in Your Pocket That Does Not Exist"
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Smooth-scroll for in-page links
+        document.querySelectorAll('a[href^="#"]').forEach((a) => {
+            a.addEventListener('click', (e) => {
+                const id = a.getAttribute('href');
+                if (id && id.length > 1) {
+                    const el = document.querySelector(id);
+                    if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth' }); }
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

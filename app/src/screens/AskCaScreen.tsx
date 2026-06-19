@@ -69,7 +69,7 @@ const LEARN_TOPICS: LearnTopic[] = [
   },
   {
     id: 'ims',
-    icon: <ShieldCheck size={18} color={colors.success} />,
+    icon: <ShieldCheck size={18} color={colors.severity.resolved} />,
     title_en: 'How does IMS work?',
     title_hi: 'IMS कैसे काम करता है?',
     body_en:
@@ -79,7 +79,7 @@ const LEARN_TOPICS: LearnTopic[] = [
   },
   {
     id: 'hsn',
-    icon: <Receipt size={18} color={colors.info} />,
+    icon: <Receipt size={18} color={colors.primary} />,
     title_en: 'Why do HSN codes matter?',
     title_hi: 'HSN कोड क्यों ज़रूरी है?',
     body_en:
@@ -89,7 +89,7 @@ const LEARN_TOPICS: LearnTopic[] = [
   },
   {
     id: 'deadlines',
-    icon: <CalendarClock size={18} color={colors.warning} />,
+    icon: <CalendarClock size={18} color={colors.severity.pending} />,
     title_en: 'Key GST deadlines',
     title_hi: 'GST की मुख्य तारीखें',
     body_en:
@@ -99,7 +99,7 @@ const LEARN_TOPICS: LearnTopic[] = [
   },
   {
     id: 'blocked',
-    icon: <Scale size={18} color={colors.error} />,
+    icon: <Scale size={18} color={colors.severity.blocked} />,
     title_en: 'Section 17(5) — blocked credit',
     title_hi: 'Section 17(5) — blocked credit',
     body_en:

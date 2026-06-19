@@ -130,11 +130,11 @@ export default function ReportsScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <Text style={[styles.statValue, { color: colors.success }]}>{formatRupee(totalSaved)}</Text>
+            <Text style={[styles.statValue, { color: colors.severity.resolved }]}>{formatRupee(totalSaved)}</Text>
             <Text style={styles.statLabel}>{lang === 'hi' ? 'ITC सुरक्षित' : 'ITC SAFE'}</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={[styles.statValue, { color: colors.error }]}>{formatRupee(totalBlocked)}</Text>
+            <Text style={[styles.statValue, { color: colors.severity.blocked }]}>{formatRupee(totalBlocked)}</Text>
             <Text style={styles.statLabel}>{lang === 'hi' ? 'ITC अटकी' : 'ITC BLOCKED'}</Text>
           </View>
         </View>

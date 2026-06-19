@@ -26,8 +26,18 @@ function gradientFor(variant: Variant) {
   }
 }
 
+function textColorFor(variant: Variant) {
+  switch (variant) {
+    case 'blocked': return colors.severity.blockedDark;
+    case 'pending': return colors.severity.pendingDark;
+    case 'resolved': return colors.severity.resolvedDark;
+    default: return colors.surface;
+  }
+}
+
 export default function GradientHeader({ title, subtitle, onBack, variant = 'brand', right }: Props) {
   const { t } = useI18n();
+  const fg = textColorFor(variant);
   return (
     <LinearGradient
       colors={gradientFor(variant)}
@@ -39,20 +49,20 @@ export default function GradientHeader({ title, subtitle, onBack, variant = 'bra
         <View style={styles.row}>
           {onBack ? (
             <TouchableOpacity
-              style={styles.backButton}
+              style={[styles.backButton, variant !== 'brand' && { backgroundColor: 'rgba(0,0,0,0.08)' }]}
               onPress={onBack}
               hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel={t.a11y.back}
             >
-              <ChevronLeft size={24} color={colors.surface} />
+              <ChevronLeft size={24} color={fg} />
             </TouchableOpacity>
           ) : (
             <View style={styles.backSpacer} />
           )}
           <View style={styles.titleBlock}>
-            <Text style={styles.title} numberOfLines={1}>{title}</Text>
-            {subtitle ? <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
+            <Text style={[styles.title, { color: fg }]} numberOfLines={1}>{title}</Text>
+            {subtitle ? <Text style={[styles.subtitle, variant !== 'brand' && { color: fg, opacity: 0.7 }]} numberOfLines={1}>{subtitle}</Text> : null}
           </View>
           {right ?? <View style={styles.backSpacer} />}
         </View>

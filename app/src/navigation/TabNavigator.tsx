@@ -1,6 +1,6 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { ScanSearch, IndianRupee, UserCircle, MessageCircleQuestion } from 'lucide-react-native';
+import { Home, FileText, MessageSquare, User } from 'lucide-react-native';
 import { colors, typography } from '../theme/tokens';
 import { useI18n } from '../i18n/context';
 import { TabParamList } from './types';
@@ -23,8 +23,8 @@ export default function TabNavigator() {
         tabBarInactiveTintColor: colors.inkMuted,
         tabBarLabelStyle: {
           ...typography.label,
-          fontSize: 11,
-          fontWeight: '600',
+          fontSize: 10,
+          fontWeight: '500',
         },
         tabBarStyle: {
           backgroundColor: colors.surface,
@@ -48,7 +48,7 @@ export default function TabNavigator() {
         options={{
           tabBarLabel: t.tabs.home,
           tabBarIcon: ({ color, size }) => (
-            <ScanSearch size={size} color={color} />
+            <Home size={size} color={color} />
           ),
         }}
       />
@@ -58,7 +58,7 @@ export default function TabNavigator() {
         options={{
           tabBarLabel: t.tabs.reports,
           tabBarIcon: ({ color, size }) => (
-            <IndianRupee size={size} color={color} />
+            <FileText size={size} color={color} />
           ),
         }}
       />
@@ -68,7 +68,7 @@ export default function TabNavigator() {
         options={{
           tabBarLabel: t.tabs.askCa,
           tabBarIcon: ({ color, size }) => (
-            <MessageCircleQuestion size={size} color={color} />
+            <MessageSquare size={size} color={color} />
           ),
         }}
       />
@@ -78,7 +78,7 @@ export default function TabNavigator() {
         options={{
           tabBarLabel: t.tabs.profile,
           tabBarIcon: ({ color, size }) => (
-            <UserCircle size={size} color={color} />
+            <User size={size} color={color} />
           ),
         }}
       />

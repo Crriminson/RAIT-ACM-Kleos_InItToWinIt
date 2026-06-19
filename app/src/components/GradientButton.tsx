@@ -13,6 +13,10 @@ interface Props {
   variant?: 'brand' | 'blocked';
 }
 
+function labelColorFor(variant: 'brand' | 'blocked') {
+  return variant === 'blocked' ? colors.severity.blockedDark : '#FFFFFF';
+}
+
 export default function GradientButton({
   label,
   onPress,
@@ -52,7 +56,7 @@ export default function GradientButton({
         style={styles.button}
       >
         {icon}
-        <Text style={styles.label}>{label}</Text>
+        <Text style={[styles.label, { color: labelColorFor(variant) }]}>{label}</Text>
       </LinearGradient>
     </TouchableOpacity>
   );
@@ -60,12 +64,12 @@ export default function GradientButton({
 
 const styles = StyleSheet.create({
   shadow: {
-    borderRadius: radii.button,
+    borderRadius: radii.full,
     ...elevation.primary,
   },
   button: {
-    height: 54,
-    borderRadius: radii.button,
+    height: 56,
+    borderRadius: radii.full,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
@@ -73,14 +77,14 @@ const styles = StyleSheet.create({
   },
   label: {
     ...typography.label,
-    color: colors.surface,
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
   },
   disabled: {
-    backgroundColor: '#E2E6EE',
-    height: 54,
-    borderRadius: radii.button,
+    backgroundColor: colors.accentMuted,
+    height: 56,
+    borderRadius: radii.full,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',

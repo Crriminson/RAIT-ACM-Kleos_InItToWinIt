@@ -40,7 +40,7 @@ export default function LockScreen() {
       <SafeAreaView style={styles.safe}>
         <View style={styles.top}>
           <View style={styles.iconCard}>
-            <ShieldCheck size={36} color={colors.surface} />
+            <ShieldCheck size={36} color={colors.primary} />
           </View>
           <Text style={styles.title}>{t.lock.title}</Text>
           <Text style={styles.sub}>{error ? t.lock.wrongPin : t.lock.enterPin}</Text>
@@ -52,7 +52,7 @@ export default function LockScreen() {
 
         {biometricEnabled && biometricAvailable ? (
           <TouchableOpacity style={styles.bioButton} onPress={tryBiometric} activeOpacity={0.8}>
-            <Fingerprint size={20} color={colors.surface} />
+            <Fingerprint size={20} color={colors.primary} />
             <Text style={styles.bioText}>{t.lock.useBiometric}</Text>
           </TouchableOpacity>
         ) : (
@@ -69,12 +69,12 @@ const styles = StyleSheet.create({
   top: { alignItems: 'center', gap: spacing.sm, marginTop: spacing.xl },
   iconCard: {
     width: 80, height: 80, borderRadius: 26,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)',
+    backgroundColor: colors.accentMuted,
+    borderWidth: 1, borderColor: colors.border,
     justifyContent: 'center', alignItems: 'center', marginBottom: spacing.md,
   },
-  title: { fontSize: 24, fontWeight: '800', color: colors.surface },
-  sub: { ...typography.body, color: 'rgba(255,255,255,0.85)' },
+  title: { fontSize: 24, fontWeight: '800', color: colors.ink },
+  sub: { ...typography.body, color: colors.inkSecondary },
   padWrap: {
     backgroundColor: colors.surface,
     borderRadius: 28,
@@ -85,6 +85,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
     paddingVertical: spacing.md,
   },
-  bioText: { ...typography.label, color: colors.surface, fontWeight: '600' },
+  bioText: { ...typography.label, color: colors.primary, fontWeight: '600' },
   bioSpacer: { height: 48 },
 });

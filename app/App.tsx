@@ -59,7 +59,7 @@ export default function App() {
             <ProfileProvider>
               <SessionProvider>
                 <NavigationContainer>
-                  <StatusBar style="light" />
+                  <StatusBar style="dark" />
                   <View style={{ flex: 1 }}>
                     <AppNavigator />
                     <OfflineBanner />

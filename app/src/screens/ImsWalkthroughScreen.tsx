@@ -103,7 +103,7 @@ export default function ImsWalkthroughScreen() {
 
         <WalkthroughStep
           num={2}
-          icon={<Search size={20} color={colors.warning} />}
+          icon={<Search size={20} color={colors.severity.pending} />}
           title_en="Navigate to IMS"
           title_hi="IMS पर जाएं"
           desc_en="After login: Services → Returns → Invoice Management System (IMS). You'll see a list of all invoices your suppliers have filed."
@@ -113,7 +113,7 @@ export default function ImsWalkthroughScreen() {
 
         <WalkthroughStep
           num={3}
-          icon={<MousePointerClick size={20} color={colors.info} />}
+          icon={<MousePointerClick size={20} color={colors.inkMuted} />}
           title_en="Find the invoice"
           title_hi="Invoice ढूँढें"
           desc_en="Search by supplier GSTIN or invoice number. Match it with the recommendation from this app."
@@ -123,7 +123,7 @@ export default function ImsWalkthroughScreen() {
 
         <WalkthroughStep
           num={4}
-          icon={<CheckCircle2 size={20} color={colors.success} />}
+          icon={<CheckCircle2 size={20} color={colors.severity.resolved} />}
           title_en="Take the action"
           title_hi="Action लें"
           desc_en="Select the invoice → Choose Accept, Reject, or Hold as recommended → Click Submit. You can change your choice until the GSTR-3B filing deadline."
@@ -143,7 +143,7 @@ export default function ImsWalkthroughScreen() {
 
         {/* Warning card */}
         <View style={styles.warningCard}>
-          <AlertTriangle size={18} color={colors.warning} />
+          <AlertTriangle size={18} color={colors.severity.pending} />
           <View style={{ flex: 1 }}>
             <Text style={styles.warningTitle}>
               {lang === 'hi' ? 'कुछ न करें = Auto-Accept' : 'No action = Auto-Accept'}
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
   warningTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: colors.warning,
+    color: colors.severity.pending,
     marginBottom: 4,
   },
   warningText: {

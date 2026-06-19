@@ -1,41 +1,34 @@
 export const colors = {
-  primary: '#045EFE',
-  primaryDark: '#0341B8',
-  primaryDeep: '#022A78',
-  surface: '#FFFFFF',
-  ink: '#0A0A0A',
-  inkSecondary: '#444444',
-  inkMuted: '#888888',
-  border: '#E8EAEF',
-  borderHover: '#D5D9E2',
-  background: '#F4F6FA',
-  // A subtle filled surface used on top of white cards (chips, inputs, thumbnails).
-  surfaceRaised: '#F2F5FA',
-  // Muted accent tint for icon chips and highlighted zones.
-  accentMuted: '#EBF2FF',
-
-  // Semantic status colors (aliases of the severity palette below).
-  success: '#2E7D32',
-  warning: '#E65100',
-  error: '#D32F2F',
-  info: '#0288D1',
+  primary: '#E8432A',
+  primaryDark: '#C93820',
+  primaryDeep: '#A12A15',
+  surface: '#FDF9F3', // card
+  surfaceRaised: '#FDF9F3', // card
+  background: '#FAF6EE',
+  ink: '#221E1A', // foreground
+  inkSecondary: '#4A3F35', // secondary-foreground
+  inkMuted: '#7A6E63', // muted-foreground
+  border: '#E2D9CC',
+  borderHover: '#D1C4B2',
+  accentMuted: '#EDE7DA', // muted
+  
   // Scrim behind bottom sheets / modals.
-  overlay: 'rgba(10, 10, 10, 0.5)',
+  overlay: 'rgba(34, 30, 26, 0.5)',
 
   severity: {
-    blocked: '#D32F2F',
-    blockedDark: '#A11616',
-    blockedBg: '#FFF0F0',
-    pending: '#E65100',
-    pendingDark: '#B23D00',
-    pendingBg: '#FFF8F0',
-    resolved: '#2E7D32',
-    resolvedDark: '#1B5E20',
-    resolvedBg: '#F0FFF1',
+    blocked: '#7A2419',
+    blockedDark: '#5E1B12',
+    blockedBg: '#F5E2DC',
+    pending: '#6B4020',
+    pendingDark: '#4A2C15',
+    pendingBg: '#F5EBD8',
+    resolved: '#2A5C32',
+    resolvedDark: '#1E4224',
+    resolvedBg: '#E3EFDF',
   },
 
-  recognitionBg: '#EBF2FF',
-  unrecognisedBg: '#FFF8F0',
+  recognitionBg: '#D4E4D8', // sage-blob
+  unrecognisedBg: '#F5EBD8', // hold-bg
 } as const;
 
 // Font families per weight. AppText maps fontWeight → the right family,
@@ -61,12 +54,12 @@ export type FontWeightKey = keyof typeof fonts.inter;
 
 // Gradient color stops — consumed by expo-linear-gradient `colors` prop.
 export const gradients = {
-  brand: ['#0A6BFF', '#045EFE', '#0341B8'] as const,
-  brandSoft: ['#1E78FF', '#045EFE'] as const,
-  blocked: ['#E8453C', '#D32F2F', '#A11616'] as const,
-  pending: ['#F57C2E', '#E65100', '#B23D00'] as const,
-  resolved: ['#3DA042', '#2E7D32', '#1B5E20'] as const,
-  splash: ['#0A6BFF', '#0450E0', '#022A78'] as const,
+  brand: ['#E8432A', '#C93820'] as const,
+  brandSoft: ['#F26751', '#E8432A'] as const,
+  blocked: ['#E0B0A5', '#F5E2DC'] as const,
+  pending: ['#E0C99A', '#F5EBD8'] as const,
+  resolved: ['#B5D4B9', '#E3EFDF'] as const,
+  splash: ['#FAF6EE', '#F0EAE0', '#EDE7DA'] as const,
 } as const;
 
 export const typography = {
@@ -89,8 +82,8 @@ export const spacing = {
 } as const;
 
 export const radii = {
-  card: 16,
-  button: 12,
+  card: 16, // radius-2xl
+  button: 12, // radius-xl
   badge: 20,
   input: 12,
   thumbnail: 8,
@@ -100,38 +93,38 @@ export const radii = {
 
 export const elevation = {
   soft: {
-    shadowColor: '#1A2B4A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
+    shadowColor: '#221E1A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
     elevation: 2,
   },
   card: {
-    shadowColor: '#1A2B4A',
+    shadowColor: '#221E1A',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 14,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
     elevation: 4,
   },
   modal: {
-    shadowColor: '#0A0A0A',
+    shadowColor: '#221E1A',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.16,
+    shadowOpacity: 0.1,
     shadowRadius: 24,
     elevation: 8,
   },
   fab: {
-    shadowColor: '#045EFE',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
+    shadowColor: '#E8432A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.28,
     shadowRadius: 16,
     elevation: 8,
   },
   primary: {
-    shadowColor: '#045EFE',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 14,
+    shadowColor: '#E8432A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.28,
+    shadowRadius: 16,
     elevation: 6,
   },
 } as const;
