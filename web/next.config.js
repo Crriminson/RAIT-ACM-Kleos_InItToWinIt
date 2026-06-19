@@ -1,9 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  cacheComponents: true,
-  experimental: {
-    appDir: true,
-  },
+  // App directory is the default in Next.js 13+
+  // No need for experimental flag
 }
 
 module.exports = nextConfig
