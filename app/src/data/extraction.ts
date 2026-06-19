@@ -99,9 +99,9 @@ export async function extractInvoiceFromFile(
     if (ocr.text && looksLikeInvoice(ocr.text)) {
       ocrText = ocr.text;
     } else if (ocr.error) {
-      console.warn('[OCR] ML Kit failed:', ocr.error);
+      console.log('[OCR] ML Kit failed:', ocr.error);
     } else {
-      console.warn('[OCR] ML Kit produced non-invoice text, passing to Gemini fallback');
+      console.log('[OCR] ML Kit produced non-invoice text, passing to Gemini fallback');
     }
   } catch (err) {
     // ML Kit module not available (e.g. running in Expo Go) — skip silently.

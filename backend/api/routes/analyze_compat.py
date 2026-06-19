@@ -304,6 +304,20 @@ async def analyze_invoice_compat(
             log.warning("Gemini vision fallback failed: %s", exc)
             extraction_note = f"{extraction_note} | gemini: {exc}"
 
+    # -- TESSERACT FALLBACK (free, local) ------------------------------------
+    try:
+        from core.ocr_tesseract import extract_text_tesseract
+        raw_b64 = body.base64Data
+        raw_ocr = extract_text_tesseract(raw_b64)
+        extracted = extract_invoice(raw_ocr)
+        if extracted is not None:
+            return JSONResponse(status_code=200, content={
+                "method": "tesseract",
+                "data": _build_extracted_data(extracted),
+            })
+    except Exception as exc:
+        log.warning("Tesseract fallback failed: %s", exc)
+
     # -- LAST RESORT: empty shell --------------------------------------------
     return JSONResponse(status_code=200, content={
         "method": "fallback",
