@@ -38,11 +38,12 @@ function severityBg(s: Severity) {
     : colors.severity.resolvedBg;
 }
 
-// IMS Action badge (FEATURE-013) — same palette as DiagnosisScreen
+// IMS Action badge (FEATURE-013) — dark theme palette
 const IMS_COLORS: Record<ImsAction, { bg: string; text: string }> = {
-  ACCEPT:         { bg: '#E8F5E9', text: '#2E7D32' },
-  HOLD:           { bg: '#FFF3E0', text: '#E65100' },
-  NOT_ON_IMS_YET: { bg: '#ECEFF1', text: '#546E7A' },
+  ACCEPT:         { bg: colors.severity.resolvedBg, text: colors.severity.resolved },
+  HOLD:           { bg: colors.severity.pendingBg,  text: colors.severity.pending },
+  NOT_ON_IMS_YET: { bg: colors.surfaceRaised,       text: colors.inkMuted },
+  VERIFY:         { bg: '#0A1220',                   text: '#3B82F6' },
 };
 
 function ActionBadge({ action }: { action: ImsAction }) {
@@ -51,6 +52,7 @@ function ActionBadge({ action }: { action: ImsAction }) {
   const label =
     action === 'ACCEPT'           ? t.diagnosis.imsAccept
     : action === 'HOLD'           ? t.diagnosis.imsHold
+    : action === 'VERIFY'         ? 'Verify'
     : t.diagnosis.imsNotYet;
   return (
     <View style={[detailStyles.imsBadge, { backgroundColor: bg }]}>
@@ -179,7 +181,7 @@ export default function InvoiceDetailScreen() {
           <Text style={styles.sectionLabel}>{t.detail.whatToDo}</Text>
           <Text style={styles.actionText}>{action}</Text>
           <TouchableOpacity style={styles.copyButton} onPress={handleCopy} activeOpacity={0.85}>
-            <MessageCircle size={18} color={colors.surface} />
+            <MessageCircle size={18} color={colors.ink} />
             <Text style={styles.copyButtonText}>
               {copied ? t.detail.copied : t.detail.copyMessage}
             </Text>
@@ -327,7 +329,7 @@ const styles = StyleSheet.create({
   },
   copyButtonText: {
     ...typography.label,
-    color: colors.surface,
+    color: colors.ink,
     fontWeight: '600',
   },
   comparisonHeading: {

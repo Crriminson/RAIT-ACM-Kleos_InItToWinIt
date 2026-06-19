@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -28,7 +28,16 @@ export default function GstinSetupScreen() {
 
   const [gstin, setGstin] = useState(profile?.gstin ?? '');
   const [shopName, setShopName] = useState(profile?.shopName ?? '');
+  const [turnover, setTurnover] = useState<number | null>(profile?.turnover ?? null);
   const [error, setError] = useState<string | null>(null);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+
+  const TURNOVER_OPTIONS = [
+    { label: t.onboarding.turnover1, value: 10000000 },
+    { label: t.onboarding.turnover2, value: 30000000 },
+    { label: t.onboarding.turnover3, value: 45000000 },
+    { label: t.onboarding.turnover4, value: 60000000 },
+  ];
 
   const finish = () => {
     if (mode === 'edit') {
@@ -44,7 +53,11 @@ export default function GstinSetupScreen() {
       setError(t.onboarding.invalidGstin);
       return;
     }
-    await saveProfile({ gstin: normalized, shopName: shopName.trim() });
+    await saveProfile({
+      gstin: normalized,
+      shopName: shopName.trim(),
+      turnover: turnover,
+    });
     finish();
   };
 
@@ -64,7 +77,11 @@ export default function GstinSetupScreen() {
 
           <Text style={styles.fieldLabel}>{t.onboarding.gstinLabel}</Text>
           <TextInput
-            style={[styles.input, error && styles.inputError]}
+            style={[
+              styles.input,
+              focusedField === 'gstin' && styles.inputFocused,
+              error && styles.inputError,
+            ]}
             value={gstin}
             onChangeText={(v) => {
               setGstin(v.toUpperCase());
@@ -75,6 +92,8 @@ export default function GstinSetupScreen() {
             autoCapitalize="characters"
             autoCorrect={false}
             maxLength={15}
+            onFocus={() => setFocusedField('gstin')}
+            onBlur={() => setFocusedField(null)}
           />
           {error && <Text style={styles.errorText}>{error}</Text>}
 
@@ -82,12 +101,38 @@ export default function GstinSetupScreen() {
             {t.onboarding.shopLabel}
           </Text>
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              focusedField === 'shop' && styles.inputFocused,
+            ]}
             value={shopName}
             onChangeText={setShopName}
             placeholder={t.onboarding.shopPlaceholder}
             placeholderTextColor={colors.inkMuted}
+            onFocus={() => setFocusedField('shop')}
+            onBlur={() => setFocusedField(null)}
           />
+
+          <Text style={[styles.fieldLabel, { marginTop: spacing.md }]}>
+            {t.onboarding.turnoverLabel}
+          </Text>
+          <View style={styles.segmentedControl}>
+            {TURNOVER_OPTIONS.map((opt) => {
+              const isSelected = turnover === opt.value;
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[styles.segment, isSelected && styles.segmentSelected]}
+                  onPress={() => setTurnover(opt.value)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.segmentText, isSelected && styles.segmentTextSelected]}>
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </ScrollView>
 
         <View style={styles.footer}>
@@ -106,7 +151,7 @@ export default function GstinSetupScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
   },
   flex: {
     flex: 1,
@@ -119,7 +164,9 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: colors.recognitionBg,
+    backgroundColor: colors.surfaceRaised,
+    borderWidth: 1,
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.lg,
@@ -142,12 +189,15 @@ const styles = StyleSheet.create({
   input: {
     ...typography.body,
     color: colors.ink,
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radii.input,
     paddingHorizontal: spacing.md,
     paddingVertical: 14,
+  },
+  inputFocused: {
+    borderColor: colors.primary,
   },
   inputError: {
     borderColor: colors.severity.blocked,
@@ -161,17 +211,28 @@ const styles = StyleSheet.create({
     padding: spacing.screenH,
     gap: spacing.sm,
   },
-  cta: {
-    backgroundColor: colors.primary,
-    height: 52,
+  segmentedControl: {
+    gap: spacing.xs,
+  },
+  segment: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
     borderRadius: radii.button,
-    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: spacing.md,
     alignItems: 'center',
   },
-  ctaText: {
-    ...typography.label,
-    color: colors.surface,
-    fontSize: 15,
+  segmentSelected: {
+    backgroundColor: colors.accentMuted,
+    borderColor: colors.primary,
+  },
+  segmentText: {
+    ...typography.body,
+    color: colors.inkSecondary,
+  },
+  segmentTextSelected: {
+    color: colors.primary,
     fontWeight: '600',
   },
   skip: {

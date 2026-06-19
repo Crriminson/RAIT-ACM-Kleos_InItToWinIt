@@ -6,6 +6,8 @@ const STORAGE_KEY = '@kleos/profile';
 export interface Profile {
   gstin: string;
   shopName: string;
+  turnover: number | null;
+  businessType?: string;
 }
 
 interface ProfileContextValue {

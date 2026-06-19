@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -103,7 +103,7 @@ export default function HistoryScreen() {
             activeOpacity={0.85}
             onPress={() => navigation.navigate('Main', { screen: 'Home' })}
           >
-            <Upload size={16} color={colors.surface} />
+            <Upload size={16} color={colors.ink} />
             <Text style={styles.uploadCtaText}>{t.history.uploadCta}</Text>
           </TouchableOpacity>
         </View>
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   },
   emptyIcon: {
     width: 96, height: 96, borderRadius: 48,
-    backgroundColor: colors.recognitionBg,
+    backgroundColor: colors.surfaceRaised,
     justifyContent: 'center', alignItems: 'center',
   },
   emptyText: {
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
   },
   uploadCtaText: {
     ...typography.label,
-    color: colors.surface,
+    color: colors.ink,
   },
   group: {
     marginBottom: spacing.md,

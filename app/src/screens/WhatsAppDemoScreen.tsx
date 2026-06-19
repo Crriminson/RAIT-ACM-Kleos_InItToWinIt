@@ -135,7 +135,12 @@ export default function WhatsAppDemoScreen() {
     let result: DiagnosisResult | undefined;
     let usedFallback = false;
     try {
-      const { invoice } = await extractInvoiceFromFile(file, `wa-${Date.now()}`, profile?.gstin);
+      const { invoice } = await extractInvoiceFromFile(
+        file, 
+        `wa-${Date.now()}`, 
+        { gstin: profile?.gstin || '09TEST', business_description: profile?.businessType },
+        lang
+      );
       result = runDiagnosis([invoice], gstr2b)[0];
     } catch {
       // Demo-safe: still run the real matching engine on a known invoice so a

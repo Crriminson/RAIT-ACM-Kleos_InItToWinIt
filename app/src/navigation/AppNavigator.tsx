@@ -4,6 +4,7 @@ import { colors } from '../theme/tokens';
 import { RootStackParamList } from './types';
 
 import SplashScreen from '../screens/SplashScreen';
+import OnboardingWalkthroughScreen from '../screens/OnboardingWalkthroughScreen';
 import TabNavigator from './TabNavigator';
 import ReviewScreen from '../screens/ReviewScreen';
 import ProcessingScreen from '../screens/ProcessingScreen';
@@ -17,6 +18,7 @@ import Portal2BScreen from '../screens/Portal2BScreen';
 import CompareScreen from '../screens/CompareScreen';
 import LockSetupScreen from '../screens/LockSetupScreen';
 import WhatsAppDemoScreen from '../screens/WhatsAppDemoScreen';
+import ImsWalkthroughScreen from '../screens/ImsWalkthroughScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -29,6 +31,11 @@ export default function AppNavigator() {
       }}
     >
       <Stack.Screen name="Splash" component={SplashScreen} />
+      <Stack.Screen
+        name="OnboardingWalkthrough"
+        component={OnboardingWalkthroughScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
       <Stack.Screen name="GstinSetup" component={GstinSetupScreen} />
       <Stack.Screen name="Main" component={TabNavigator} />
       <Stack.Screen
@@ -58,6 +65,7 @@ export default function AppNavigator() {
         component={WhatsAppDemoScreen}
         options={{ presentation: 'card', animation: 'slide_from_right' }}
       />
+      <Stack.Screen name="ImsWalkthrough" component={ImsWalkthroughScreen} />
     </Stack.Navigator>
   );
 }

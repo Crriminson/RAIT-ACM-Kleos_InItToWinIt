@@ -1,16 +1,16 @@
-﻿import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
   Image,
+  Animated,
 } from 'react-native';
 import { Text } from '../components/AppText';
 import * as DocumentPicker from 'expo-document-picker';
 import { readAssetText } from '../utils/file-read';
 import { notify } from '../utils/dialog';
-import { LinearGradient } from 'expo-linear-gradient';
 import {
   Camera,
   FileSpreadsheet,
@@ -24,17 +24,27 @@ import {
   ChevronDown,
   ChevronUp,
   FileText,
+  ShieldCheck,
+  Clock,
+  IndianRupee,
+  TrendingDown,
+  Zap,
+  ScanSearch,
 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, typography, spacing, radii, elevation, gradients } from '../theme/tokens';
+import { colors, typography, spacing, radii, elevation } from '../theme/tokens';
 import { useI18n } from '../i18n/context';
 import { useProfile } from '../data/contexts/profile-context';
 import { useSession } from '../data/contexts/session-context';
 import { parseGstr2bCsv } from '../data/parse-gstr2b-csv';
 import { RootStackParamList } from '../navigation/types';
 import GradientButton from '../components/GradientButton';
+
+function formatRupee(n: number) {
+  return '₹' + Math.round(n).toLocaleString('en-IN');
+}
 
 export default function UploadScreen() {
   const { t, lang } = useI18n();
@@ -43,6 +53,16 @@ export default function UploadScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const [showImages, setShowImages] = useState(false);
+
+  // Fade-in animation
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
+    ]).start();
+  }, []);
 
   const hasGstr2b = session.gstr2bFile !== null;
   const hasInvoices = session.invoiceFiles.length > 0;
@@ -67,8 +87,6 @@ export default function UploadScreen() {
           'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
           '*/*',
         ],
-        // Read the content:// URI directly (ContentResolver) instead of a cached
-        // copy — avoids the Expo Go sandbox "isn't readable" error on Android.
         copyToCacheDirectory: false,
       });
       if (result.canceled || !result.assets?.[0]) return;
@@ -98,8 +116,6 @@ export default function UploadScreen() {
       const result = await DocumentPicker.getDocumentAsync({
         type: ['image/*', 'application/pdf'],
         multiple: true,
-        // Read the original content:// URI via ContentResolver instead of a
-        // cached copy — avoids the Expo Go "isn't readable" error on Android.
         copyToCacheDirectory: false,
       });
       if (result.canceled || !result.assets) return;
@@ -121,188 +137,302 @@ export default function UploadScreen() {
 
   const greeting = profile?.shopName
     ? (lang === 'hi' ? `नमस्ते, ${profile.shopName}` : `Hello, ${profile.shopName}`)
-    : (lang === 'hi' ? 'नमस्ते 👋' : 'Hello 👋');
+    : (lang === 'hi' ? 'नमस्ते' : 'Hello');
+
+  const lastRun = session.history[0];
+  const totalChecks = session.history.length;
+  const totalSaved = session.history.reduce((sum, r) => sum + r.totalResolved, 0);
+  const totalBlocked = session.history.reduce((sum, r) => sum + r.totalBlocked, 0);
 
   return (
     <View style={styles.root}>
-      {/* Gradient header */}
-      <LinearGradient colors={gradients.brand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
-        <SafeAreaView edges={['top']}>
-          <Text style={styles.greeting}>{greeting}</Text>
-          <Text style={styles.headerTitle}>
-            {lang === 'hi' ? 'इस महीने की जाँच शुरू करें' : "Start this month's check"}
-          </Text>
-        </SafeAreaView>
-      </LinearGradient>
-
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.contentContainer}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Demo shortcut */}
-        {!session.gstr2bFile && session.invoiceFiles.length === 0 && (
-          <TouchableOpacity style={styles.demoButton} activeOpacity={0.85} onPress={() => session.loadDemo()}>
-            <Sparkles size={18} color={colors.primary} />
-            <Text style={styles.demoButtonText}>
-              {lang === 'hi' ? 'Demo data से देखें' : 'Try with demo data'}
-            </Text>
-            <ArrowRight size={16} color={colors.primary} />
-          </TouchableOpacity>
-        )}
-
-        {/* Step 1: GSTR-2B */}
-        <View style={styles.stepRow}>
-          <View style={styles.stepNum}><Text style={styles.stepNumText}>1</Text></View>
-          <Text style={styles.stepTitle}>
-            {lang === 'hi' ? 'GSTR-2B अपलोड करें' : 'Upload GSTR-2B'}
-          </Text>
-        </View>
-
-        {session.gstr2bFile ? (
-          <View style={styles.fileAccepted}>
-            <View style={styles.fileAcceptedIcon}>
-              <CheckCircle size={22} color={colors.severity.resolved} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.fileAcceptedName} numberOfLines={1}>{session.gstr2bFile.name}</Text>
-              <Text style={styles.fileAcceptedDetail}>
-                {session.gstr2bEntries.length} {lang === 'hi' ? 'entries मिलीं' : 'entries found'}
+        <SafeAreaView edges={['top']}>
+          <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+            {/* Hero header */}
+            <View style={styles.heroSection}>
+              <View style={styles.heroTop}>
+                <Text style={styles.greeting}>{greeting}</Text>
+                <View style={styles.brandBadge}>
+                  <ScanSearch size={18} color={colors.primary} />
+                </View>
+              </View>
+              <Text style={styles.heroTitle}>
+                {lang === 'hi' ? 'GST जाँच शुरू\nकरें' : "Start your\nGST check"}
+              </Text>
+              <Text style={styles.heroSub}>
+                {lang === 'hi'
+                  ? 'Invoices upload करें — ITC कितनी अटकी है, 2 मिनट में पता करें'
+                  : 'Upload invoices — find out how much ITC is blocked in 2 minutes'}
               </Text>
             </View>
-            <TouchableOpacity onPress={() => session.reset()} hitSlop={8} style={styles.removeBtn}>
-              <X size={18} color={colors.inkMuted} />
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <TouchableOpacity style={styles.uploadZone} activeOpacity={0.8} onPress={pickGstr2b}>
-            <View style={[styles.zoneIcon, { backgroundColor: colors.recognitionBg }]}>
-              <FileSpreadsheet size={24} color={colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.zoneLabel}>{t.upload.gstr2bLabel}</Text>
-              <Text style={styles.zoneHint}>{t.upload.gstr2bHint}</Text>
-            </View>
-            <ArrowRight size={18} color={colors.inkMuted} />
-          </TouchableOpacity>
-        )}
 
-        {/* Step 2: Invoices */}
-        <View style={[styles.stepRow, { marginTop: spacing.lg }]}>
-          <View style={styles.stepNum}><Text style={styles.stepNumText}>2</Text></View>
-          <Text style={styles.stepTitle}>
-            {lang === 'hi' ? 'Invoices जोड़ें' : 'Add invoices'}
-          </Text>
-          {session.invoiceFiles.length > 0 && (
-            <View style={styles.countBadge}>
-              <Text style={styles.countBadgeText}>{session.invoiceFiles.length}</Text>
-            </View>
-          )}
-        </View>
+            {/* GSTR-3B deadline countdown */}
+            {(() => {
+              const now = new Date();
+              const deadlineDay = 20;
+              const deadlineMonth = now.getDate() > deadlineDay ? now.getMonth() + 1 : now.getMonth();
+              const deadlineYear = deadlineMonth > 11 ? now.getFullYear() + 1 : now.getFullYear();
+              const deadline = new Date(deadlineYear, deadlineMonth > 11 ? 0 : deadlineMonth, deadlineDay);
+              const daysLeft = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+              const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+              const deadlineLabel = `${deadlineDay} ${monthNames[deadline.getMonth()]}`;
+              const isUrgent = daysLeft <= 5;
 
-        <TouchableOpacity style={styles.uploadZone} activeOpacity={0.8} onPress={pickInvoices}>
-          <View style={[styles.zoneIcon, { backgroundColor: '#EEF6EE' }]}>
-            <FolderOpen size={24} color={colors.severity.resolved} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.zoneLabel}>{t.upload.invoiceFileLabel}</Text>
-            <Text style={styles.zoneHint}>{t.upload.invoiceFileHint}</Text>
-          </View>
-          <ArrowRight size={18} color={colors.inkMuted} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.uploadZone, { marginTop: spacing.sm }]}
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate('Camera')}
-        >
-          <View style={[styles.zoneIcon, { backgroundColor: '#FFF3E8' }]}>
-            <Camera size={24} color={colors.severity.pending} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.zoneLabel}>{t.upload.invoiceCameraLabel}</Text>
-            <Text style={styles.zoneHint}>{t.upload.invoiceCameraHint}</Text>
-          </View>
-          <ArrowRight size={18} color={colors.inkMuted} />
-        </TouchableOpacity>
-
-        {/* Uploaded invoices preview — collapsed by default */}
-        {hasInvoices && (
-          <View style={styles.previewCard}>
-            <TouchableOpacity
-              style={styles.previewHeader}
-              activeOpacity={0.7}
-              onPress={() => setShowImages((v) => !v)}
-            >
-              <View style={styles.previewHeaderLeft}>
-                <View style={styles.previewIcon}>
-                  <Images size={18} color={colors.primary} />
-                </View>
-                <Text style={styles.previewTitle}>
-                  {session.invoiceFiles.length}{' '}
-                  {lang === 'hi' ? 'invoices जोड़ी गईं' : 'invoices added'}
-                </Text>
-              </View>
-              <View style={styles.previewToggle}>
-                <Text style={styles.previewToggleText}>
-                  {showImages
-                    ? (lang === 'hi' ? 'छुपाएं' : 'Hide')
-                    : (lang === 'hi' ? 'देखें' : 'View')}
-                </Text>
-                {showImages ? (
-                  <ChevronUp size={16} color={colors.primary} />
-                ) : (
-                  <ChevronDown size={16} color={colors.primary} />
-                )}
-              </View>
-            </TouchableOpacity>
-
-            {showImages && (
-              <View style={styles.thumbGrid}>
-                {session.invoiceFiles.map((f) => (
-                  <View key={f.uri} style={styles.thumbWrap}>
-                    {isRealImage(f) ? (
-                      <Image source={{ uri: f.uri }} style={styles.thumb} />
-                    ) : (
-                      <View style={[styles.thumb, styles.thumbPlaceholder]}>
-                        <FileText size={20} color={colors.inkMuted} />
-                        <Text style={styles.thumbName} numberOfLines={1}>
-                          {f.name.replace(/\.[^.]+$/, '')}
-                        </Text>
-                      </View>
-                    )}
-                    <TouchableOpacity
-                      style={styles.thumbRemove}
-                      onPress={() => session.removeInvoiceFile(f.uri)}
-                      hitSlop={6}
-                    >
-                      <X size={12} color={colors.surface} />
-                    </TouchableOpacity>
+              return (
+                <View style={[styles.deadlineBanner, isUrgent && styles.deadlineBannerUrgent]}>
+                  <View style={[styles.deadlineDays, isUrgent && styles.deadlineDaysUrgent]}>
+                    <Text style={[styles.deadlineDaysNum, isUrgent && { color: colors.error }]}>
+                      {daysLeft}
+                    </Text>
+                    <Text style={styles.deadlineDaysLabel}>
+                      {lang === 'hi' ? 'दिन' : 'days'}
+                    </Text>
                   </View>
-                ))}
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.deadlineTitle}>
+                      {lang === 'hi'
+                        ? `GSTR-3B deadline: ${deadlineLabel}`
+                        : `GSTR-3B due: ${deadlineLabel}`}
+                    </Text>
+                    <Text style={styles.deadlineSub}>
+                      {lang === 'hi'
+                        ? 'IMS actions इससे पहले पूरे करें'
+                        : 'Complete IMS actions before this date'}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })()}
+
+            {/* Stats row — returning users */}
+            {totalChecks > 0 && (
+              <View style={styles.statsRow}>
+                <View style={styles.statCard}>
+                  <Text style={[styles.statValue, { color: colors.success }]}>
+                    {formatRupee(totalSaved)}
+                  </Text>
+                  <Text style={styles.statLabel}>{lang === 'hi' ? 'ITC सुरक्षित' : 'ITC safe'}</Text>
+                </View>
+                <View style={styles.statCard}>
+                  <Text style={[styles.statValue, { color: colors.error }]}>
+                    {formatRupee(totalBlocked)}
+                  </Text>
+                  <Text style={styles.statLabel}>{lang === 'hi' ? 'ITC अटकी' : 'ITC blocked'}</Text>
+                </View>
+                <View style={styles.statCard}>
+                  <Text style={[styles.statValue, { color: colors.ink }]}>{totalChecks}</Text>
+                  <Text style={styles.statLabel}>{lang === 'hi' ? 'जाँचें' : 'checks'}</Text>
+                </View>
               </View>
             )}
-          </View>
-        )}
 
-        <GradientButton
-          label={
-            canProceed
-              ? `${session.gstr2bEntries.length} + ${session.invoiceFiles.length} ${t.upload.ready}`
-              : t.upload.startChecking
-          }
-          disabled={!canProceed}
-          onPress={handleStart}
-          icon={canProceed ? <ArrowRight size={20} color={colors.surface} /> : undefined}
-          style={{ marginTop: spacing.xl }}
-        />
+            {/* First-time onboarding card */}
+            {totalChecks === 0 && !session.gstr2bFile && session.invoiceFiles.length === 0 && (
+              <View style={styles.onboardCard}>
+                <View style={styles.onboardSteps}>
+                  {[
+                    {
+                      num: '1',
+                      text: lang === 'hi' ? 'GSTR-2B CSV अपलोड करें' : 'Upload your GSTR-2B CSV',
+                      icon: <FileSpreadsheet size={14} color={colors.primary} />,
+                    },
+                    {
+                      num: '2',
+                      text: lang === 'hi' ? 'Invoices जोड़ें (photo/file)' : 'Add invoices (photo/file)',
+                      icon: <Camera size={14} color={colors.warning} />,
+                    },
+                    {
+                      num: '3',
+                      text: lang === 'hi' ? 'ITC कितनी अटकी, तुरंत पता' : 'Instantly see blocked ITC',
+                      icon: <Zap size={14} color={colors.success} />,
+                    },
+                  ].map((step) => (
+                    <View key={step.num} style={styles.onboardStep}>
+                      <View style={styles.onboardStepIcon}>{step.icon}</View>
+                      <Text style={styles.onboardStepText}>{step.text}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
 
-        {!canProceed && (
-          <View style={styles.hintRow}>
-            <Info size={14} color={colors.inkMuted} />
-            <Text style={styles.hintText}>{missingHint}</Text>
-          </View>
-        )}
+            {/* Demo shortcut */}
+            {!session.gstr2bFile && session.invoiceFiles.length === 0 && (
+              <TouchableOpacity style={styles.demoButton} activeOpacity={0.85} onPress={() => session.loadDemo()}>
+                <View style={styles.demoIconWrap}>
+                  <Sparkles size={16} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.demoButtonTitle}>
+                    {lang === 'hi' ? 'Demo data से देखें' : 'Try with demo data'}
+                  </Text>
+                  <Text style={styles.demoButtonSub}>
+                    {lang === 'hi' ? '8 invoices · तुरंत results' : '8 invoices · instant results'}
+                  </Text>
+                </View>
+                <ArrowRight size={16} color={colors.inkMuted} />
+              </TouchableOpacity>
+            )}
+
+            {/* Section label */}
+            <Text style={styles.sectionLabel}>
+              {lang === 'hi' ? 'अपलोड करें' : 'UPLOAD'}
+            </Text>
+
+            {/* Step 1: GSTR-2B */}
+            <View style={styles.stepRow}>
+              <View style={styles.stepNum}><Text style={styles.stepNumText}>1</Text></View>
+              <Text style={styles.stepTitle}>
+                {lang === 'hi' ? 'GSTR-2B अपलोड करें' : 'Upload GSTR-2B'}
+              </Text>
+            </View>
+
+            {session.gstr2bFile ? (
+              <View style={styles.fileAccepted}>
+                <View style={styles.fileAcceptedIcon}>
+                  <CheckCircle size={22} color={colors.severity.resolved} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.fileAcceptedName} numberOfLines={1}>{session.gstr2bFile.name}</Text>
+                  <Text style={styles.fileAcceptedDetail}>
+                    {session.gstr2bEntries.length} {lang === 'hi' ? 'entries मिलीं' : 'entries found'}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => session.reset()} hitSlop={8} style={styles.removeBtn}>
+                  <X size={18} color={colors.inkMuted} />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity style={styles.uploadZone} activeOpacity={0.8} onPress={pickGstr2b}>
+                <View style={[styles.zoneIcon, { backgroundColor: colors.accentMuted }]}>
+                  <FileSpreadsheet size={22} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.zoneLabel}>{t.upload.gstr2bLabel}</Text>
+                  <Text style={styles.zoneHint}>{t.upload.gstr2bHint}</Text>
+                </View>
+                <ArrowRight size={16} color={colors.inkMuted} />
+              </TouchableOpacity>
+            )}
+
+            {/* Step 2: Invoices */}
+            <View style={[styles.stepRow, { marginTop: spacing.lg }]}>
+              <View style={styles.stepNum}><Text style={styles.stepNumText}>2</Text></View>
+              <Text style={styles.stepTitle}>
+                {lang === 'hi' ? 'Invoices जोड़ें' : 'Add invoices'}
+              </Text>
+              {session.invoiceFiles.length > 0 && (
+                <View style={styles.countBadge}>
+                  <Text style={styles.countBadgeText}>{session.invoiceFiles.length}</Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.uploadRow}>
+              <TouchableOpacity style={styles.uploadZoneCompact} activeOpacity={0.8} onPress={pickInvoices}>
+                <View style={[styles.zoneIconSmall, { backgroundColor: colors.severity.resolvedBg }]}>
+                  <FolderOpen size={20} color={colors.severity.resolved} />
+                </View>
+                <Text style={styles.zoneLabelSmall}>{t.upload.invoiceFileLabel}</Text>
+                <Text style={styles.zoneHintSmall}>{t.upload.invoiceFileHint}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.uploadZoneCompact} activeOpacity={0.8} onPress={() => navigation.navigate('Camera')}>
+                <View style={[styles.zoneIconSmall, { backgroundColor: colors.severity.pendingBg }]}>
+                  <Camera size={20} color={colors.severity.pending} />
+                </View>
+                <Text style={styles.zoneLabelSmall}>{t.upload.invoiceCameraLabel}</Text>
+                <Text style={styles.zoneHintSmall}>{t.upload.invoiceCameraHint}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Uploaded invoices preview */}
+            {hasInvoices && (
+              <View style={styles.previewCard}>
+                <TouchableOpacity
+                  style={styles.previewHeader}
+                  activeOpacity={0.7}
+                  onPress={() => setShowImages((v) => !v)}
+                >
+                  <View style={styles.previewHeaderLeft}>
+                    <View style={styles.previewIcon}>
+                      <Images size={16} color={colors.primary} />
+                    </View>
+                    <Text style={styles.previewTitle}>
+                      {session.invoiceFiles.length}{' '}
+                      {lang === 'hi' ? 'invoices जोड़ी गईं' : 'invoices added'}
+                    </Text>
+                  </View>
+                  <View style={styles.previewToggle}>
+                    <Text style={styles.previewToggleText}>
+                      {showImages
+                        ? (lang === 'hi' ? 'छुपाएं' : 'Hide')
+                        : (lang === 'hi' ? 'देखें' : 'View')}
+                    </Text>
+                    {showImages ? (
+                      <ChevronUp size={16} color={colors.primary} />
+                    ) : (
+                      <ChevronDown size={16} color={colors.primary} />
+                    )}
+                  </View>
+                </TouchableOpacity>
+
+                {showImages && (
+                  <View style={styles.thumbGrid}>
+                    {session.invoiceFiles.map((f) => (
+                      <View key={f.uri} style={styles.thumbWrap}>
+                        {isRealImage(f) ? (
+                          <Image source={{ uri: f.uri }} style={styles.thumb} />
+                        ) : (
+                          <View style={[styles.thumb, styles.thumbPlaceholder]}>
+                            <FileText size={20} color={colors.inkMuted} />
+                            <Text style={styles.thumbName} numberOfLines={1}>
+                              {f.name.replace(/\.[^.]+$/, '')}
+                            </Text>
+                          </View>
+                        )}
+                        <TouchableOpacity
+                          style={styles.thumbRemove}
+                          onPress={() => session.removeInvoiceFile(f.uri)}
+                          hitSlop={6}
+                        >
+                          <X size={12} color="#FFFFFF" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            )}
+
+            <GradientButton
+              label={
+                canProceed
+                  ? `${session.gstr2bEntries.length} + ${session.invoiceFiles.length} ${t.upload.ready}`
+                  : t.upload.startChecking
+              }
+              disabled={!canProceed}
+              onPress={handleStart}
+              icon={canProceed ? <ArrowRight size={20} color="#FFFFFF" /> : undefined}
+              style={{ marginTop: spacing.xl }}
+            />
+
+            {!canProceed && (
+              <View style={styles.hintRow}>
+                <Info size={14} color={colors.inkMuted} />
+                <Text style={styles.hintText}>{missingHint}</Text>
+              </View>
+            )}
+
+            {/* Bottom breathing room */}
+            <View style={{ height: spacing.xl }} />
+          </Animated.View>
+        </SafeAreaView>
       </ScrollView>
     </View>
   );
@@ -310,49 +440,248 @@ export default function UploadScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  header: {
-    paddingHorizontal: spacing.screenH,
-    paddingBottom: spacing.lg,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
-    ...elevation.card,
-  },
-  greeting: { ...typography.label, color: 'rgba(255,255,255,0.85)', marginTop: spacing.sm },
-  headerTitle: { fontSize: 24, fontWeight: '800', color: colors.surface, marginTop: 4, letterSpacing: -0.3 },
-
   scroll: { flex: 1 },
-  contentContainer: { padding: spacing.screenH, paddingTop: spacing.lg, paddingBottom: spacing.xl },
+  scrollContent: {
+    paddingHorizontal: spacing.screenH,
+    paddingBottom: spacing.xl,
+  },
 
+  // Hero
+  heroSection: {
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.lg,
+  },
+  heroTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  brandBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.accentMuted,
+    borderWidth: 1,
+    borderColor: 'rgba(255,59,59,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  greeting: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.inkMuted,
+    letterSpacing: 0.5,
+  },
+  heroTitle: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: colors.ink,
+    lineHeight: 42,
+    marginTop: spacing.md,
+    letterSpacing: -0.5,
+  },
+  heroSub: {
+    ...typography.body,
+    color: colors.inkSecondary,
+    marginTop: spacing.sm,
+    lineHeight: 22,
+  },
+
+  // Deadline banner
+  deadlineBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  deadlineBannerUrgent: {
+    backgroundColor: colors.severity.blockedBg,
+    borderColor: 'rgba(255,68,68,0.2)',
+  },
+  deadlineDays: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: colors.surfaceRaised,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deadlineDaysUrgent: {
+    backgroundColor: 'rgba(255,68,68,0.15)',
+  },
+  deadlineDaysNum: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: colors.ink,
+    lineHeight: 22,
+  },
+  deadlineDaysLabel: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: colors.inkMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  deadlineTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.ink,
+  },
+  deadlineSub: {
+    fontSize: 12,
+    color: colors.inkMuted,
+    marginTop: 1,
+  },
+
+  // Stats
+  statsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    alignItems: 'center',
+    gap: 2,
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.ink,
+  },
+  statLabel: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: colors.inkMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+
+  // Onboarding card
+  onboardCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  onboardSteps: { gap: spacing.md },
+  onboardStep: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  onboardStepIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: colors.surfaceRaised,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  onboardStepText: {
+    ...typography.body,
+    color: colors.inkSecondary,
+    fontSize: 14,
+    flex: 1,
+  },
+
+  // Demo button
   demoButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.recognitionBg,
+    backgroundColor: colors.accentMuted,
     borderRadius: radii.card,
-    paddingVertical: 14,
-    paddingHorizontal: spacing.md,
+    padding: spacing.md,
     marginBottom: spacing.lg,
     borderWidth: 1,
-    borderColor: 'rgba(4,94,254,0.2)',
+    borderColor: 'rgba(255,59,59,0.2)',
   },
-  demoButtonText: { ...typography.label, color: colors.primary, fontWeight: '700', flex: 1 },
+  demoIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  demoButtonTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  demoButtonSub: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: colors.inkMuted,
+    marginTop: 1,
+  },
 
-  stepRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
+  // Section
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.inkMuted,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    marginBottom: spacing.md,
+  },
+
+  // Steps
+  stepRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
   stepNum: {
-    width: 24, height: 24, borderRadius: 12,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: colors.primary,
-    justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  stepNumText: { ...typography.caption, color: colors.surface, fontWeight: '800' },
-  stepTitle: { ...typography.heading2, color: colors.ink, flex: 1 },
+  stepNumText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  stepTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.ink,
+    flex: 1,
+  },
   countBadge: {
-    minWidth: 24, height: 24, borderRadius: 12,
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: colors.primary,
-    justifyContent: 'center', alignItems: 'center',
-    paddingHorizontal: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
   },
-  countBadgeText: { ...typography.caption, color: colors.surface, fontWeight: '800' },
+  countBadgeText: {
+    fontSize: 11,
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
 
+  // Upload zones — full width
   uploadZone: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -362,37 +691,78 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: radii.card,
     padding: spacing.md,
-    ...elevation.soft,
   },
   zoneIcon: {
-    width: 48, height: 48, borderRadius: 14,
-    justifyContent: 'center', alignItems: 'center',
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  zoneLabel: { ...typography.bodyBold, color: colors.ink },
+  zoneLabel: { fontSize: 15, fontWeight: '600', color: colors.ink },
   zoneHint: { ...typography.caption, color: colors.inkMuted, marginTop: 2 },
 
+  // Upload zones — compact 2-col
+  uploadRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  uploadZoneCompact: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.card,
+    padding: spacing.md,
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  zoneIconSmall: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  zoneLabelSmall: { fontSize: 13, fontWeight: '600', color: colors.ink, textAlign: 'center' },
+  zoneHintSmall: { fontSize: 11, color: colors.inkMuted, textAlign: 'center' },
+
+  // File accepted
   fileAccepted: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     backgroundColor: colors.severity.resolvedBg,
     borderWidth: 1,
-    borderColor: 'rgba(46,125,50,0.3)',
+    borderColor: 'rgba(34,197,94,0.25)',
     borderRadius: radii.card,
     padding: spacing.md,
   },
   fileAcceptedIcon: {
-    width: 48, height: 48, borderRadius: 14,
-    backgroundColor: colors.surface,
-    justifyContent: 'center', alignItems: 'center',
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: colors.surfaceRaised,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  fileAcceptedName: { ...typography.bodyBold, color: colors.ink },
-  fileAcceptedDetail: { ...typography.caption, color: colors.severity.resolved, marginTop: 2 },
+  fileAcceptedName: { fontSize: 14, fontWeight: '600', color: colors.ink },
+  fileAcceptedDetail: {
+    ...typography.caption,
+    color: colors.severity.resolved,
+    marginTop: 2,
+  },
   removeBtn: {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: colors.surface,
-    justifyContent: 'center', alignItems: 'center',
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: colors.surfaceRaised,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
+
+  // Hint
   hintRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -402,14 +772,13 @@ const styles = StyleSheet.create({
   },
   hintText: { ...typography.caption, color: colors.inkMuted },
 
-  // Uploaded invoices preview
+  // Preview
   previewCard: {
     backgroundColor: colors.surface,
     borderRadius: radii.card,
     borderWidth: 1,
     borderColor: colors.border,
     marginTop: spacing.md,
-    ...elevation.soft,
   },
   previewHeader: {
     flexDirection: 'row',
@@ -419,13 +788,20 @@ const styles = StyleSheet.create({
   },
   previewHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   previewIcon: {
-    width: 36, height: 36, borderRadius: 11,
-    backgroundColor: colors.recognitionBg,
-    justifyContent: 'center', alignItems: 'center',
+    width: 32,
+    height: 32,
+    borderRadius: 9,
+    backgroundColor: colors.accentMuted,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  previewTitle: { ...typography.bodyBold, color: colors.ink },
+  previewTitle: { fontSize: 14, fontWeight: '600', color: colors.ink },
   previewToggle: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  previewToggleText: { ...typography.label, color: colors.primary, fontWeight: '700' },
+  previewToggleText: {
+    fontSize: 12,
+    color: colors.primary,
+    fontWeight: '700',
+  },
   thumbGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -435,27 +811,31 @@ const styles = StyleSheet.create({
   },
   thumbWrap: { position: 'relative' },
   thumb: {
-    width: 72,
-    height: 72,
-    borderRadius: radii.thumbnail,
-    backgroundColor: colors.background,
+    width: 64,
+    height: 64,
+    borderRadius: 8,
+    backgroundColor: colors.surfaceRaised,
   },
   thumbPlaceholder: {
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 4,
+    gap: 2,
     borderWidth: 1,
     borderColor: colors.border,
     padding: 4,
   },
-  thumbName: { ...typography.caption, fontSize: 9, color: colors.inkMuted, textAlign: 'center' },
+  thumbName: {
+    fontSize: 8,
+    color: colors.inkMuted,
+    textAlign: 'center',
+  },
   thumbRemove: {
     position: 'absolute',
-    top: -6,
-    right: -6,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    top: -5,
+    right: -5,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: colors.severity.blocked,
     justifyContent: 'center',
     alignItems: 'center',

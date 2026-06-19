@@ -13,7 +13,6 @@ import {
 import { Text } from '../components/AppText';
 import * as Clipboard from 'expo-clipboard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LinearGradient } from 'expo-linear-gradient';
 import {
   CheckCircle,
   RotateCcw,
@@ -25,6 +24,7 @@ import {
   ArrowRight,
   Sparkles,
   ChevronRight,
+  ChevronLeft,
   Database,
   GitCompare,
   ThumbsDown,
@@ -34,21 +34,27 @@ import {
   Volume2,
   VolumeX,
   CalendarClock,
+  ShieldAlert,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react-native';
 import { useNavigation, CommonActions } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, typography, spacing, radii, elevation, gradients } from '../theme/tokens';
+import { colors, typography, spacing, radii, elevation } from '../theme/tokens';
 import { useI18n } from '../i18n/context';
 import { DiagnosisResult, ImsAction, Severity } from '../data/types';
 import { generateWhatsAppMessage } from '../data/matching-engine';
 import { useSession } from '../data/contexts/session-context';
+import { useProfile } from '../data/contexts/profile-context';
 import { RootStackParamList } from '../navigation/types';
 import AnimatedCard from '../components/AnimatedCard';
 import ItcHealthCard from '../components/ItcHealthCard';
 import { sendWhatsApp, exportCsv, exportPdf } from '../utils/share';
 import { speak, stopSpeaking } from '../utils/speech';
 import { section16Deadline } from '../utils/gst-deadlines';
+import EInvoiceAlertCard from '../components/EInvoiceAlertCard';
+import { getEInvoiceAlert, EInvoiceAlertData } from '../api/ai';
 
 function formatRupee(amount: number): string {
   return '₹' + amount.toLocaleString('en-IN');
@@ -102,10 +108,12 @@ function PulseRing({ color }: { color: string }) {
 }
 
 // ── IMS Action Badge (FEATURE-013) ──────────────────────────────────────────
+// Dark-mode IMS colors: dark tinted backgrounds with lighter accent text
 const IMS_COLORS: Record<ImsAction, { bg: string; text: string }> = {
-  ACCEPT:       { bg: '#E8F5E9', text: '#2E7D32' },
-  HOLD:         { bg: '#FFF3E0', text: '#E65100' },
-  NOT_ON_IMS_YET: { bg: '#ECEFF1', text: '#546E7A' },
+  ACCEPT:       { bg: colors.severity.resolvedBg, text: colors.severity.resolved },
+  HOLD:         { bg: colors.severity.pendingBg,  text: colors.severity.pending },
+  NOT_ON_IMS_YET: { bg: colors.surfaceRaised,     text: colors.inkMuted },
+  VERIFY:       { bg: '#0A0F1A',                  text: '#3B82F6' },
 };
 
 function ActionBadge({ action, lang }: { action: ImsAction; lang: 'hi' | 'en' }) {
@@ -114,6 +122,7 @@ function ActionBadge({ action, lang }: { action: ImsAction; lang: 'hi' | 'en' })
   const label =
     action === 'ACCEPT'         ? t.diagnosis.imsAccept
     : action === 'HOLD'         ? t.diagnosis.imsHold
+    : action === 'VERIFY'       ? (lang === 'hi' ? 'जाँच करें' : 'Verify')
     : t.diagnosis.imsNotYet;
 
   return (
@@ -154,6 +163,41 @@ function DisagreeButton({ resultId, lang }: { resultId: string; lang: 'hi' | 'en
   );
 }
 
+// ── F13 Caution Strip ────────────────────────────────────────────────────────
+function S17CautionStrip({ s17 }: { s17: NonNullable<DiagnosisResult['s17_5']> }) {
+  const { lang } = useI18n();
+  const [expanded, setExpanded] = useState(false);
+
+  const stripText = lang === 'hi' ? s17.verdict_copy.caution_strip_hi : s17.verdict_copy.caution_strip_en;
+  const expText = lang === 'hi' ? s17.verdict_copy.expanded_explanation_hi : s17.verdict_copy.expanded_explanation_en;
+  const caText = lang === 'hi' ? s17.verdict_copy.ca_verify_prompt_hi : s17.verdict_copy.ca_verify_prompt_en;
+
+  if (s17.s17_5_flag !== 'FLAGGED' || !stripText) return null;
+
+  return (
+    <View style={styles.cautionContainer}>
+      <TouchableOpacity
+        style={styles.cautionStrip}
+        onPress={() => setExpanded(!expanded)}
+        activeOpacity={0.8}
+      >
+        <ShieldAlert size={16} color={colors.severity.pending} />
+        <Text style={styles.cautionStripText}>{stripText}</Text>
+        {expanded ? <ChevronUp size={16} color={colors.severity.pending} /> : <ChevronDown size={16} color={colors.severity.pending} />}
+      </TouchableOpacity>
+
+      {expanded && (
+        <View style={styles.cautionExpanded}>
+          <Text style={styles.cautionExplanation}>{expText}</Text>
+          <View style={styles.caVerifyBox}>
+            <Text style={styles.caVerifyText}>{caText}</Text>
+          </View>
+        </View>
+      )}
+    </View>
+  );
+}
+
 // ── Issue card ───────────────────────────────────────────────────────────────
 function IssueCard({ result, lang }: { result: DiagnosisResult; lang: 'hi' | 'en' }) {
   const { t } = useI18n();
@@ -177,7 +221,7 @@ function IssueCard({ result, lang }: { result: DiagnosisResult; lang: 'hi' | 'en
   // Stop speech if the card unmounts (e.g. user leaves the screen mid-read).
   useEffect(() => () => stopSpeaking(), []);
 
-  // What the 🔊 button reads aloud — amount + plain-language reason + action.
+  // What the speaker button reads aloud — amount + plain-language reason + action.
   // Built for both languages so we can fall back to English audio on devices
   // (e.g. MIUI) that have no Hindi voice installed.
   const buildSpoken = (l: 'hi' | 'en'): string => {
@@ -243,7 +287,7 @@ function IssueCard({ result, lang }: { result: DiagnosisResult; lang: 'hi' | 'en
             {result.supplierName} · {result.invoiceNumber}
           </Text>
         </View>
-        {/* 🔊 Read aloud (TTS) — Hindi/English, for low-literacy users */}
+        {/* Read aloud (TTS) — Hindi/English, for low-literacy users */}
         <TouchableOpacity
           style={[styles.speakButton, speaking && styles.speakButtonActive]}
           onPress={handleSpeak}
@@ -251,12 +295,33 @@ function IssueCard({ result, lang }: { result: DiagnosisResult; lang: 'hi' | 'en
           accessibilityRole="button"
           accessibilityLabel={lang === 'hi' ? 'पढ़कर सुनाएं' : 'Read aloud'}
         >
-          {speaking ? <VolumeX size={18} color={colors.surface} /> : <Volume2 size={18} color={colors.primary} />}
+          {speaking ? <VolumeX size={18} color={colors.ink} /> : <Volume2 size={18} color={colors.primary} />}
         </TouchableOpacity>
       </View>
 
-      {/* IMS Action badge (FEATURE-013) */}
-      <ActionBadge action={result.imsAction} lang={lang} />
+      {/* IMS Action badge + F11 Recoverable/Permanent tag */}
+      <View style={styles.badgeRow}>
+        <ActionBadge action={result.imsAction} lang={lang} />
+        {result.severity !== 'resolved' && result.is_recoverable !== undefined && (
+          <View style={[
+            styles.f11Badge,
+            { backgroundColor: result.is_recoverable ? colors.severity.pendingBg : colors.severity.blockedBg },
+          ]}>
+            <View style={[
+              styles.f11Dot,
+              { backgroundColor: result.is_recoverable ? colors.severity.pending : colors.severity.blocked },
+            ]} />
+            <Text style={[
+              styles.f11Text,
+              { color: result.is_recoverable ? colors.severity.pending : colors.severity.blocked },
+            ]}>
+              {result.is_recoverable
+                ? (lang === 'hi' ? 'सुधार सम्भव' : 'Recoverable')
+                : (lang === 'hi' ? 'स्थायी नुकसान' : 'Permanent')}
+            </Text>
+          </View>
+        )}
+      </View>
 
       {/* Amount */}
       <Text style={[styles.amount, { color }]}>{formatRupee(result.amount)}</Text>
@@ -297,6 +362,9 @@ function IssueCard({ result, lang }: { result: DiagnosisResult; lang: 'hi' | 'en
         </View>
       )}
 
+      {/* F13 Blocked Credit Caution Strip */}
+      {result.s17_5 && <S17CautionStrip s17={result.s17_5} />}
+
       {/* Buttons */}
       {result.severity !== 'resolved' && (
         <View style={styles.cardActions}>
@@ -308,7 +376,7 @@ function IssueCard({ result, lang }: { result: DiagnosisResult; lang: 'hi' | 'en
             <Text style={styles.ghostButtonText}>{t.diagnosis.viewInvoice}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.whatsappButton} onPress={handleWhatsApp}>
-            <MessageCircle size={16} color={colors.surface} />
+            <MessageCircle size={16} color='#FFFFFF' />
             <Text style={styles.solidButtonText}>
               {copied ? t.diagnosis.copied : (lang === 'hi' ? 'WhatsApp भेजें' : 'WhatsApp')}
             </Text>
@@ -327,6 +395,7 @@ function IssueCard({ result, lang }: { result: DiagnosisResult; lang: 'hi' | 'en
 export default function DiagnosisScreen() {
   const { t, lang } = useI18n();
   const session = useSession();
+  const { profile } = useProfile();
   const navigation = useNavigation();
 
   const [exportVisible, setExportVisible] = useState(false);
@@ -338,6 +407,53 @@ export default function DiagnosisScreen() {
 
   const blockedCount = results.filter((r) => r.severity === 'blocked').length;
   const pendingCount = results.filter((r) => r.severity === 'pending').length;
+
+  const [einvoiceAlert, setEinvoiceAlert] = useState<EInvoiceAlertData | null>(null);
+  const [alertDismissed, setAlertDismissed] = useState(false);
+
+  useEffect(() => {
+    const EINVOICE_THRESHOLD = 50000000; // ₹5 crore
+    async function fetchAlert() {
+      try {
+        const res = await getEInvoiceAlert({
+          gstin: profile?.gstin || '09ABCDE1234F1Z5',
+          trader_name: profile?.shopName || 'Demo Trader',
+          reported_annual_turnover_inr: profile?.turnover || null,
+          estimated_turnover_from_invoices_inr: null,
+          invoice_count_this_month: results.length,
+          ui_language: lang,
+          user_asked_about_einvoicing: false,
+        });
+        if (res.data.show_alert && res.data.alert) {
+          setEinvoiceAlert(res.data.alert);
+        }
+      } catch {
+        // Backend unreachable — generate alert locally if turnover qualifies
+        const turnover = profile?.turnover ?? 0;
+        if (turnover >= EINVOICE_THRESHOLD) {
+          setEinvoiceAlert({
+            severity: turnover >= EINVOICE_THRESHOLD ? 'applies_now' : 'approaching',
+            headline_hi: 'आपको e-invoice बनाना ज़रूरी है',
+            headline_en: 'E-invoicing is mandatory for you',
+            body_hi: `आपका turnover ₹5 करोड़ से ज़्यादा है — हर B2B invoice के लिए e-invoice बनाना अनिवार्य है। IRP portal (einvoice1.gst.gov.in) पर register करें और हर invoice का IRN generate करें। Non-compliance penalty: ₹10,000 प्रति invoice या 100% tax, जो भी कम हो।`,
+            body_en: `Your turnover exceeds ₹5 crore — generating e-invoices for every B2B invoice is mandatory. Register on the IRP portal (einvoice1.gst.gov.in) and generate an IRN for every invoice. Non-compliance penalty: ₹10,000 per invoice or 100% of tax, whichever is lower.`,
+            action_label_hi: 'IRP Portal खोलें',
+            action_label_en: 'Open IRP Portal',
+            action_url: 'https://einvoice1.gst.gov.in',
+            ca_nudge_hi: 'अपने CA से e-invoicing setup में मदद लें।',
+            ca_nudge_en: 'Ask your CA to help you set up e-invoicing.',
+            disclaimer_hi: 'यह सूचना आपके बताए turnover पर आधारित है — सटीक जानकारी के लिए CA से संपर्क करें।',
+            disclaimer_en: 'This alert is based on the turnover you declared — consult your CA for precise guidance.',
+          });
+        }
+      }
+    }
+    fetchAlert();
+  }, [lang, results.length]);
+
+  const handleBack = () => {
+    navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'Main' }] }));
+  };
 
   const handleNewCheck = () => {
     session.reset();
@@ -385,6 +501,12 @@ export default function DiagnosisScreen() {
 
   const handleExportMenu = () => setExportVisible(true);
 
+  // Determine severity color for the hero header amount
+  const heroSeverityColor =
+    blockedCount > 0 ? colors.severity.blocked
+    : pendingCount > 0 ? colors.severity.pending
+    : colors.severity.resolved;
+
   if (results.length === 0) {
     return (
       <View style={styles.allClear}>
@@ -397,32 +519,27 @@ export default function DiagnosisScreen() {
     );
   }
 
-  const headerGradient =
-    blockedCount > 0 ? gradients.blocked
-    : pendingCount > 0 ? gradients.pending
-    : gradients.resolved;
-
   return (
     <View style={styles.container}>
-      {/* Gradient hero summary */}
-      <LinearGradient
-        colors={headerGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.hero}
-      >
+      {/* Dark surface hero summary — replaces LinearGradient */}
+      <View style={styles.hero}>
         <SafeAreaView edges={['top']}>
           <View style={styles.heroRow}>
-            <Text style={styles.heroLabel}>
+            <TouchableOpacity onPress={handleBack} style={styles.backButton} hitSlop={8}>
+              <ChevronLeft size={22} color={colors.ink} />
+            </TouchableOpacity>
+            <Text style={[styles.heroLabel, { flex: 1 }]}>
               {lang === 'hi' ? 'इस महीने अटकी ITC' : 'ITC blocked this month'}
             </Text>
             <TouchableOpacity onPress={handleExportMenu} style={styles.shareButton}>
-              <Share2 size={18} color={colors.surface} />
+              <Share2 size={18} color={colors.ink} />
             </TouchableOpacity>
           </View>
 
           {/* BUG-001: show blocked and pending separately */}
-          <Text style={styles.heroAmount}>{formatRupee(summary.totalBlocked)}</Text>
+          <Text style={[styles.heroAmount, { color: heroSeverityColor }]}>
+            {formatRupee(summary.totalBlocked)}
+          </Text>
           {summary.totalPending > 0 && (
             <Text style={styles.heroPending}>
               {lang === 'hi'
@@ -454,7 +571,7 @@ export default function DiagnosisScreen() {
             </View>
           </View>
         </SafeAreaView>
-      </LinearGradient>
+      </View>
 
       <ScrollView
         style={styles.list}
@@ -469,20 +586,15 @@ export default function DiagnosisScreen() {
           resolvedCount={summary.resolvedCount}
         />
 
-        {/* AI advisory entry */}
+        {/* AI advisory entry — dark surface with accent border */}
         <TouchableOpacity
           activeOpacity={0.9}
           onPress={() => (navigation as any).navigate('AiInsights')}
           style={styles.aiButtonShadow}
         >
-          <LinearGradient
-            colors={gradients.brand}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.aiButton}
-          >
+          <View style={styles.aiButton}>
             <View style={styles.aiButtonIcon}>
-              <Sparkles size={20} color={colors.surface} />
+              <Sparkles size={20} color={colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.aiButtonTitle}>{t.aiInsights.openButton}</Text>
@@ -490,8 +602,26 @@ export default function DiagnosisScreen() {
                 {lang === 'hi' ? 'सलाह + टैक्स बचत रणनीतियाँ' : 'Advisory + tax-saving strategies'}
               </Text>
             </View>
-            <ChevronRight size={20} color={colors.surface} />
-          </LinearGradient>
+            <ChevronRight size={20} color={colors.inkMuted} />
+          </View>
+        </TouchableOpacity>
+
+        {/* IMS Walkthrough CTA */}
+        <TouchableOpacity
+          style={styles.imsGuideButton}
+          activeOpacity={0.85}
+          onPress={() => (navigation as any).navigate('ImsWalkthrough')}
+        >
+          <ShieldAlert size={18} color={colors.primary} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.imsGuideTitle}>
+              {lang === 'hi' ? 'IMS Portal पर action कैसे लें?' : 'How to take action on IMS Portal?'}
+            </Text>
+            <Text style={styles.imsGuideSub}>
+              {lang === 'hi' ? '5-step guide — Accept, Reject, Hold' : '5-step guide — Accept, Reject, Hold'}
+            </Text>
+          </View>
+          <ChevronRight size={18} color={colors.inkMuted} />
         </TouchableOpacity>
 
         {/* GST Portal + Compare entries */}
@@ -513,6 +643,16 @@ export default function DiagnosisScreen() {
             <Text style={styles.actionButtonText}>{t.compare.title}</Text>
           </TouchableOpacity>
         </View>
+
+        {einvoiceAlert && !alertDismissed && (
+          <AnimatedCard index={0}>
+            <EInvoiceAlertCard
+              alert={einvoiceAlert}
+              lang={lang}
+              onDismiss={() => setAlertDismissed(true)}
+            />
+          </AnimatedCard>
+        )}
 
         {results.map((result, idx) => (
           <AnimatedCard key={result.id} index={idx}>
@@ -588,24 +728,28 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
 
   // Export sheet (Modal)
-  sheetRoot: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
+  sheetRoot: { flex: 1, justifyContent: 'flex-end', backgroundColor: colors.overlay },
   sheet: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: 24, borderTopRightRadius: 24,
     paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl,
+    borderTopWidth: 1,
+    borderColor: colors.border,
   },
   sheetHandle: {
     alignSelf: 'center', width: 40, height: 4, borderRadius: 2,
-    backgroundColor: colors.border, marginBottom: spacing.md,
+    backgroundColor: colors.inkMuted, marginBottom: spacing.md,
   },
   sheetTitle: { ...typography.heading2, color: colors.ink, marginBottom: spacing.sm },
   sheetRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     paddingVertical: spacing.md, paddingHorizontal: spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   sheetIcon: {
     width: 40, height: 40, borderRadius: 12,
-    backgroundColor: colors.recognitionBg, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: colors.accentMuted, justifyContent: 'center', alignItems: 'center',
   },
   sheetRowText: { ...typography.bodyBold, color: colors.ink },
   sheetCancel: { alignItems: 'center', paddingVertical: spacing.md, marginTop: spacing.xs },
@@ -629,12 +773,15 @@ const styles = StyleSheet.create({
   allClearTitle: { ...typography.heading1, color: colors.severity.resolved },
   allClearSub: { ...typography.body, color: colors.inkMuted, textAlign: 'center' },
 
-  // Hero
+  // Hero — dark surface header (replaces LinearGradient)
   hero: {
+    backgroundColor: colors.surface,
     paddingHorizontal: spacing.screenH,
     paddingBottom: spacing.lg,
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
     ...elevation.card,
   },
   heroRow: {
@@ -645,34 +792,44 @@ const styles = StyleSheet.create({
   },
   heroLabel: {
     ...typography.label,
-    color: 'rgba(255,255,255,0.85)',
+    color: colors.inkSecondary,
     fontWeight: '600',
   },
-  shareButton: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  backButton: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: colors.surfaceRaised,
+    borderWidth: 1,
+    borderColor: colors.border,
     justifyContent: 'center', alignItems: 'center',
+  },
+  shareButton: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: colors.surfaceRaised,
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   heroAmount: {
     fontSize: 46,
     fontWeight: '800',
-    color: colors.surface,
     letterSpacing: -1,
     marginTop: spacing.xs,
   },
   heroPending: {
     ...typography.label,
-    color: 'rgba(255,255,255,0.80)',
+    color: colors.inkSecondary,
     marginTop: 2,
   },
   pillRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md, flexWrap: 'wrap' },
   pill: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: colors.surfaceRaised,
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: radii.badge,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  pillText: { ...typography.caption, color: colors.surface, fontWeight: '600' },
+  pillText: { ...typography.caption, color: colors.ink, fontWeight: '600' },
 
   // List
   list: { flex: 1 },
@@ -684,6 +841,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.card,
     padding: spacing.md,
     borderLeftWidth: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
     ...elevation.card,
   },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
@@ -709,7 +868,7 @@ const styles = StyleSheet.create({
   reason: { ...typography.body, color: colors.ink, marginBottom: spacing.sm },
   speakButton: {
     width: 34, height: 34, borderRadius: 17,
-    backgroundColor: colors.recognitionBg,
+    backgroundColor: colors.accentMuted,
     justifyContent: 'center', alignItems: 'center',
   },
   speakButtonActive: { backgroundColor: colors.primary },
@@ -739,7 +898,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     borderWidth: 1.5,
-    borderColor: colors.primary,
+    borderColor: colors.border,
     borderRadius: radii.button,
     paddingVertical: 11,
   },
@@ -765,9 +924,26 @@ const styles = StyleSheet.create({
     borderRadius: radii.button,
     paddingVertical: 11,
   },
-  solidButtonText: { ...typography.label, color: colors.surface, fontWeight: '600' },
+  solidButtonText: { ...typography.label, color: '#FFFFFF', fontWeight: '600' },
 
   // IMS badge (FEATURE-013)
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
+    marginBottom: spacing.sm,
+  },
+  f11Badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radii.badge,
+  },
+  f11Dot: { width: 6, height: 6, borderRadius: 3 },
+  f11Text: { fontSize: 11, fontWeight: '700' },
   imsBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -776,7 +952,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: radii.badge,
-    marginBottom: spacing.sm,
   },
   imsBadgeText: { ...typography.caption, fontWeight: '700', fontSize: 12 },
 
@@ -796,10 +971,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.recognitionBg,
+    backgroundColor: colors.accentMuted,
     borderRadius: radii.button,
     paddingVertical: 15,
     marginTop: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.primaryDeep,
   },
   newCheckText: { ...typography.label, color: colors.primary, fontWeight: '700' },
 
@@ -808,7 +985,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radii.card,
@@ -817,22 +994,37 @@ const styles = StyleSheet.create({
   },
   disclaimerText: { ...typography.caption, color: colors.inkMuted, flex: 1, fontSize: 11 },
 
-  aiButtonShadow: { borderRadius: radii.card, ...elevation.primary },
+  aiButtonShadow: { borderRadius: radii.card },
   aiButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     borderRadius: radii.card,
     padding: spacing.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.primary,
   },
   aiButtonIcon: {
     width: 44, height: 44, borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: colors.accentMuted,
     justifyContent: 'center', alignItems: 'center',
   },
-  aiButtonTitle: { ...typography.bodyBold, color: colors.surface, fontSize: 16 },
-  aiButtonSub: { ...typography.caption, color: 'rgba(255,255,255,0.85)', marginTop: 2 },
+  aiButtonTitle: { ...typography.bodyBold, color: colors.ink, fontSize: 16 },
+  aiButtonSub: { ...typography.caption, color: colors.inkSecondary, marginTop: 2 },
 
+  imsGuideButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+  },
+  imsGuideTitle: { fontSize: 14, fontWeight: '600', color: colors.ink },
+  imsGuideSub: { fontSize: 12, color: colors.inkMuted, marginTop: 1 },
   actionRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
   actionButton: {
     flex: 1,
@@ -849,4 +1041,12 @@ const styles = StyleSheet.create({
     ...elevation.soft,
   },
   actionButtonText: { ...typography.label, color: colors.ink, fontWeight: '600' },
+
+  cautionContainer: { marginTop: spacing.sm, backgroundColor: colors.severity.pendingBg, borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: colors.severity.pendingDark },
+  cautionStrip: { flexDirection: 'row', alignItems: 'center', padding: 12, gap: 8 },
+  cautionStripText: { flex: 1, color: colors.severity.pending, fontSize: 13, fontWeight: '600' },
+  cautionExpanded: { padding: 12, paddingTop: 0, gap: 8 },
+  cautionExplanation: { color: colors.severity.pending, fontSize: 13, lineHeight: 18 },
+  caVerifyBox: { backgroundColor: colors.surfaceRaised, padding: 10, borderRadius: 6, borderWidth: 1, borderColor: colors.severity.pendingDark },
+  caVerifyText: { color: colors.severity.pending, fontSize: 13, fontWeight: '600' },
 });

@@ -1,5 +1,6 @@
 export type RootStackParamList = {
   Splash: undefined;
+  OnboardingWalkthrough: undefined;
   GstinSetup: { mode: 'onboarding' | 'edit' } | undefined;
   Main: undefined;
   Camera: undefined;
@@ -13,6 +14,7 @@ export type RootStackParamList = {
   Compare: undefined;
   LockSetup: undefined;
   WhatsAppDemo: undefined;
+  ImsWalkthrough: undefined;
 };
 
 export type TabParamList = {

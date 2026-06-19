@@ -8,6 +8,48 @@ const strings = {
       subheadline: 'हर महीने कितना ITC बचाया जा सकता है — जानिए 2 मिनट में',
       cta: 'शुरू करें',
       switchLang: 'Switch to English',
+      newUserCta: 'पहली बार आए हैं? देखें यह कैसे काम करता है',
+    },
+    walkthrough: {
+      skip: 'छोड़ें',
+      next: 'आगे',
+      back: 'पीछे',
+      getStarted: 'शुरू करें',
+      stepLabel: 'Step {{n}} / {{total}}',
+      steps: [
+        {
+          title: 'अपने bill अपलोड करें',
+          body: 'GSTR-2B फ़ाइल और अपने invoices (फोटो, PDF या WhatsApp images) डालें। आपका data आपके फ़ोन पर ही रहता है।',
+        },
+        {
+          title: 'App अपने आप जाँच करता है',
+          body: 'App invoice को पढ़ता है और GSTR-2B से मिलाता है — गलत HSN, missing bill, rate या Place of Supply की गड़बड़ी पकड़ता है।',
+        },
+        {
+          title: 'आसान भाषा में नतीजा',
+          body: 'हर invoice के लिए साफ़ बताता है — क्या गलत है, क्यों, और कितने ₹ की ITC अटकी है। आपकी अपनी भाषा में।',
+        },
+        {
+          title: 'आप ही फ़ैसला करें',
+          body: 'App बताता है Accept / Reject / Hold में से क्या करना चाहिए और supplier को message भी लिख देता है। पर filing आप ख़ुद करते हैं — app कुछ अपने आप file नहीं करता।',
+        },
+      ],
+    },
+    errors: {
+      crashTitle: 'कुछ गड़बड़ हो गई',
+      crashBody: 'App में एक अनपेक्षित समस्या आ गई। आपका data आपके फ़ोन पर सुरक्षित है — कुछ खोया नहीं है। दोबारा कोशिश करें।',
+      retry: 'दोबारा कोशिश करें',
+      offlineTitle: 'सर्वर से कनेक्ट नहीं हो पा रहा',
+      offlineBody: 'App offline चल रहा है — OCR और AI सुविधाएँ अभी काम नहीं करेंगी।',
+      offlineRetry: 'दोबारा जोड़ें',
+    },
+    a11y: {
+      back: 'वापस जाएँ',
+      pinDigit: '{{d}} डालें',
+      pinDelete: 'आख़िरी अंक मिटाएँ',
+      retryConnection: 'कनेक्शन दोबारा जाँचें',
+      newUser: 'देखें यह app कैसे काम करता है',
+      switchLanguage: 'भाषा बदलें',
     },
     tabs: {
       home: 'होम',
@@ -85,6 +127,11 @@ const strings = {
       invalidGstin: 'GSTIN सही नहीं है — 15 अक्षर होने चाहिए',
       save: 'आगे बढ़ें',
       skip: 'अभी छोड़ें',
+      turnoverLabel: 'सालाना टर्नओवर',
+      turnover1: '< ₹1.5 Cr',
+      turnover2: '₹1.5 Cr - ₹4 Cr',
+      turnover3: '₹4 Cr - ₹5 Cr',
+      turnover4: '> ₹5 Cr',
     },
     camera: {
       title: 'Invoice की फोटो खींचें',
@@ -213,6 +260,48 @@ const strings = {
       subheadline: 'Find out how much ITC you can save every month — in 2 minutes',
       cta: 'Get Started',
       switchLang: 'हिंदी में देखें',
+      newUserCta: 'New here? See how it works',
+    },
+    walkthrough: {
+      skip: 'Skip',
+      next: 'Next',
+      back: 'Back',
+      getStarted: 'Get Started',
+      stepLabel: 'Step {{n}} of {{total}}',
+      steps: [
+        {
+          title: 'Upload your bills',
+          body: 'Add your GSTR-2B file and your invoices — photos, PDFs or WhatsApp images. Your data stays on your phone.',
+        },
+        {
+          title: 'The app checks automatically',
+          body: 'It reads each invoice and matches it against GSTR-2B — catching wrong HSN codes, missing bills, rate and Place-of-Supply errors.',
+        },
+        {
+          title: 'A plain-language verdict',
+          body: 'For every invoice you see what is wrong, why, and how much ITC (₹) is at stake — in your own language.',
+        },
+        {
+          title: 'You make the call',
+          body: 'The app recommends Accept / Reject / Hold and even drafts a message to your supplier. But you file it yourself — the app never files anything automatically.',
+        },
+      ],
+    },
+    errors: {
+      crashTitle: 'Something went wrong',
+      crashBody: 'The app hit an unexpected problem. Your data is safe on your phone — nothing is lost. Please try again.',
+      retry: 'Try again',
+      offlineTitle: "Can't reach the server",
+      offlineBody: 'Working offline — OCR and AI features are paused for now.',
+      offlineRetry: 'Retry',
+    },
+    a11y: {
+      back: 'Go back',
+      pinDigit: 'Enter {{d}}',
+      pinDelete: 'Delete last digit',
+      retryConnection: 'Retry connection',
+      newUser: 'See how this app works',
+      switchLanguage: 'Switch language',
     },
     tabs: {
       home: 'Home',
@@ -290,6 +379,11 @@ const strings = {
       invalidGstin: 'GSTIN looks invalid — it should be 15 characters',
       save: 'Continue',
       skip: 'Skip for now',
+      turnoverLabel: 'Annual Turnover',
+      turnover1: '< ₹1.5 Cr',
+      turnover2: '₹1.5 Cr - ₹4 Cr',
+      turnover3: '₹4 Cr - ₹5 Cr',
+      turnover4: '> ₹5 Cr',
     },
     camera: {
       title: 'Capture invoice photo',

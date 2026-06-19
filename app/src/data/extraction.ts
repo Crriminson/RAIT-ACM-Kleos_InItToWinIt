@@ -1,6 +1,7 @@
 import { Invoice } from './types';
-import { analyzeInvoice, AiMethod, ExtractedInvoiceData } from '../api/ai';
+import { analyzeInvoice, checkBlockedCredit, AiMethod, ExtractedInvoiceData } from '../api/ai';
 import { readAssetBase64 } from '../utils/file-read';
+import { Language } from '../i18n/strings';
 
 interface PickedFile {
   uri: string;
@@ -76,13 +77,13 @@ export function mapExtractedToInvoice(
  * and return it as an Invoice. Throws if the file can't be read or the
  * server is unreachable (caller decides how to handle).
  *
- * @param traderGstin  The trader's own GSTIN (from ProfileContext). Used to
- *                     determine intra-state vs inter-state tax split.
+ * @param traderProfile  The trader's profile. Used to determine intra-state vs inter-state tax split, and check s17(5) carve-outs.
  */
 export async function extractInvoiceFromFile(
   file: PickedFile,
   id: string,
-  traderGstin?: string,
+  traderProfile?: { gstin: string; business_description?: string },
+  lang: Language = 'hi',
 ): Promise<{ invoice: Invoice; method: AiMethod }> {
   const base64Data = await readAssetBase64({ uri: file.uri });
 
@@ -92,5 +93,20 @@ export async function extractInvoiceFromFile(
     fileName: file.name,
   });
 
-  return { invoice: mapExtractedToInvoice(data, id, file.uri, traderGstin), method };
+  const invoice = mapExtractedToInvoice(data, id, file.uri, traderProfile?.gstin);
+  invoice.ocr_raw_text = (data as any).ocr_raw_text || "";
+
+  // Immediately run F13 Blocked Credit check
+  if (traderProfile?.gstin) {
+    try {
+      const f13 = await checkBlockedCredit(invoice, { gstin: traderProfile.gstin, business_description: traderProfile.business_description }, lang);
+      if (f13.success && f13.data) {
+        invoice.s17_5 = f13.data;
+      }
+    } catch (e) {
+      console.warn("F13 check failed", e);
+    }
+  }
+
+  return { invoice, method };
 }

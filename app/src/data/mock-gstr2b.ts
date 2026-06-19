@@ -154,4 +154,66 @@ export const mockGstr2b: Gstr2bEntry[] = [
       },
     ],
   },
+
+  // --- SCENARIO: F12 — Place of Supply mismatch (Delhi Spice Co.) ---
+  // Supplier filed PoS as 07-Delhi (inter-state) but the real supply is
+  // intra-state (UP → UP). GSTR-2B shows IGST instead of CGST+SGST.
+  // The invoice itself correctly states PoS = 09-Uttar Pradesh.
+  {
+    gstin: '09GGGDS3333R1Z5',
+    supplierName: 'Delhi Spice Co.',
+    invoiceNumber: 'DSC/26/0198',
+    invoiceDate: '2026-05-22',
+    invoiceValue: 23600,
+    taxableValue: 20000,
+    igst: 3600,
+    cgst: 0,
+    sgst: 0,
+    placeOfSupply: '07-Delhi',
+    reverseCharge: 'N',
+    items: [
+      {
+        hsnCode: '0910',
+        description: 'Turmeric powder & spices',
+        quantity: 100,
+        unit: 'KGS',
+        taxableValue: 20000,
+        taxRate: 18,
+        cgst: 0,
+        sgst: 0,
+        igst: 3600,
+      },
+    ],
+  },
+
+  // --- SCENARIO: F13 — Section 17(5) blocked credit (Royal Restaurant) ---
+  // Clean match in GSTR-2B — supplier filed correctly. But the invoice is for
+  // catering/restaurant services, which is a blocked-credit category under S.17(5).
+  // The F13 flag lives on the invoice object (s17_5 field), not in GSTR-2B.
+  {
+    gstin: '09HHHRL2222S1Z3',
+    supplierName: 'Royal Restaurant & Caterers',
+    invoiceNumber: 'RRC/2026/0055',
+    invoiceDate: '2026-05-25',
+    invoiceValue: 11800,
+    taxableValue: 10000,
+    igst: 0,
+    cgst: 900,
+    sgst: 900,
+    placeOfSupply: '09-Uttar Pradesh',
+    reverseCharge: 'N',
+    items: [
+      {
+        hsnCode: '9963',
+        description: 'Catering services for shop opening event',
+        quantity: 1,
+        unit: 'NOS',
+        taxableValue: 10000,
+        taxRate: 18,
+        cgst: 900,
+        sgst: 900,
+        igst: 0,
+      },
+    ],
+  },
 ];

@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Sparkles, Lightbulb, FileText, WifiOff } from 'lucide-react-native';
@@ -79,7 +79,7 @@ export default function AiInsightsScreen() {
 
           {/* Advisory */}
           <View style={styles.sectionHeaderRow}>
-            <View style={[styles.sectionIcon, { backgroundColor: colors.recognitionBg }]}>
+            <View style={[styles.sectionIcon, { backgroundColor: colors.accentMuted }]}>
               <FileText size={18} color={colors.primary} />
             </View>
             <Text style={styles.sectionTitle}>{t.aiInsights.advisoryTitle}</Text>
@@ -90,7 +90,7 @@ export default function AiInsightsScreen() {
 
           {/* Strategies */}
           <View style={[styles.sectionHeaderRow, { marginTop: spacing.lg }]}>
-            <View style={[styles.sectionIcon, { backgroundColor: '#FFF8E8' }]}>
+            <View style={[styles.sectionIcon, { backgroundColor: colors.severity.pendingBg }]}>
               <Lightbulb size={18} color={colors.severity.pending} />
             </View>
             <Text style={styles.sectionTitle}>{t.aiInsights.strategiesTitle}</Text>
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl, gap: spacing.sm },
   loadingIcon: {
     width: 72, height: 72, borderRadius: 36,
-    backgroundColor: colors.recognitionBg,
+    backgroundColor: colors.surfaceRaised,
     justifyContent: 'center', alignItems: 'center',
   },
   loadingText: { ...typography.body, color: colors.inkMuted, textAlign: 'center', marginTop: spacing.sm },
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     justifyContent: 'center', alignItems: 'center',
   },
-  strategyNumText: { ...typography.bodyBold, color: colors.surface, fontWeight: '800' },
+  strategyNumText: { ...typography.bodyBold, color: colors.ink, fontWeight: '800' },
   strategyTitle: { ...typography.bodyBold, color: colors.ink },
   strategySub: { ...typography.caption, color: colors.primary, fontWeight: '600', marginTop: 2, marginBottom: spacing.xs },
   strategyDesc: { ...typography.body, color: colors.inkSecondary, fontSize: 14 },

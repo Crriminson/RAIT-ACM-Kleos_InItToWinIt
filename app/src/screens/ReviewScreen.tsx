@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
   },
   summaryIcon: {
     width: 48, height: 48, borderRadius: 14,
-    backgroundColor: colors.recognitionBg,
+    backgroundColor: colors.surfaceRaised,
     justifyContent: 'center', alignItems: 'center',
   },
   summaryTitle: { ...typography.bodyBold, color: colors.ink },
@@ -137,10 +137,10 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     ...elevation.soft,
   },
-  thumbnail: { width: 52, height: 52, borderRadius: radii.thumbnail, backgroundColor: colors.background },
+  thumbnail: { width: 52, height: 52, borderRadius: radii.thumbnail, backgroundColor: colors.surfaceRaised },
   thumbnailPlaceholder: {
     width: 52, height: 52, borderRadius: radii.thumbnail,
-    backgroundColor: colors.background,
+    backgroundColor: colors.surfaceRaised,
     justifyContent: 'center', alignItems: 'center',
   },
   invoiceCardContent: { flex: 1, gap: spacing.xs },

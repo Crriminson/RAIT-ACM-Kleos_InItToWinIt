@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
-import { Gstr2bEntry, Invoice, DiagnosisResult, Severity } from '../types';
+import { Gstr2bEntry, Invoice, DiagnosisResult, Severity, ImsAction } from '../types';
 import { runDiagnosis, computeSummary, isSameInvoice, invoiceToCleanGstr2bEntry } from '../matching-engine';
 import { mockInvoices } from '../mock-invoices';
 import { mockGstr2b } from '../mock-gstr2b';
 import { extractInvoiceFromFile } from '../extraction';
-import { AiMethod } from '../../api/ai';
+import { AiMethod, checkPosMismatchBatch } from '../../api/ai';
 import { useProfile } from './profile-context';
+import { useI18n } from '../../i18n/context';
 
 export type SessionPhase = 'idle' | 'uploading' | 'reviewing' | 'processing' | 'results';
 
@@ -102,6 +103,7 @@ const SessionContext = createContext<SessionContextValue | null>(null);
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<SessionState>(initialState);
   const { profile } = useProfile();
+  const { lang } = useI18n();
 
 
   const setGstr2bFile = useCallback((file: UploadedFile, entries: Gstr2bEntry[]) => {
@@ -174,7 +176,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           const { invoice, method } = await extractInvoiceFromFile(
             realFiles[i],
             `scan-${Date.now()}-${i}`,
-            profile?.gstin,
+            { gstin: profile?.gstin || '09TEST', business_description: profile?.businessType },
+            lang
           );
           extracted.push(invoice);
           if (method === 'gemini') aiMethod = 'gemini';
@@ -197,7 +200,49 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
     const gstr2b = state.gstr2bEntries.length > 0 ? state.gstr2bEntries : mockGstr2b;
 
-    const results = runDiagnosis(invoices, gstr2b);
+    let results = runDiagnosis(invoices, gstr2b);
+
+    // F12: Optionally enhance PoS results with backend batch check.
+    // The local matching engine already handles PoS mismatches for invoices
+    // that have a placeOfSupply field. The backend call adds AI-based PoS
+    // detection for real (non-demo) invoices. Only override when the backend
+    // returns a confirmed mismatch (MISMATCH_NEEDS_IGST or MISMATCH_NEEDS_CGST_SGST).
+    try {
+      const traderGstin = profile?.gstin || '09AABBCCDD1234';
+      const traderStateCode = traderGstin.substring(0, 2) || '09';
+      const posResponse = await checkPosMismatchBatch(invoices, { gstin: traderGstin, registered_state_code: traderStateCode }, 'hi');
+      if (posResponse.success && posResponse.results) {
+        const posMap = new Map(posResponse.results.map(r => [r.invoice_number, r]));
+        results = results.map(res => {
+          if (res.type === 'missing_transaction') return res;
+          const posCheck = posMap.get(res.invoiceNumber);
+          if (!posCheck) return res;
+          // Only override for confirmed directional mismatches — not for
+          // POS_UNREADABLE or TAX_TYPE_UNKNOWN which would clobber valid results.
+          if (posCheck.mismatch_result === 'MISMATCH_NEEDS_IGST' || posCheck.mismatch_result === 'MISMATCH_NEEDS_CGST_SGST') {
+            const type = posCheck.mismatch_result === 'MISMATCH_NEEDS_IGST' ? 'pos_mismatch_igst' : 'pos_mismatch_cgst_sgst';
+            return {
+              ...res,
+              severity: 'blocked' as Severity,
+              imsAction: (posCheck.verdict.ims_action === 'VERIFY' ? 'HOLD' : posCheck.verdict.ims_action) as ImsAction,
+              is_recoverable: posCheck.verdict.is_recoverable || false,
+              amount: posCheck.itc_at_risk_inr,
+              reason_hi: posCheck.verdict.reason_hi,
+              reason_en: posCheck.verdict.reason_en,
+              action_hi: posCheck.verdict.action_instruction_hi,
+              action_en: posCheck.verdict.action_instruction_en,
+              type,
+              supplierMessageDraftHi: posCheck.verdict.supplier_message_draft_hi || undefined,
+              supplierMessageDraftEn: posCheck.verdict.supplier_message_draft_en || undefined,
+            };
+          }
+          return res;
+        });
+      }
+    } catch {
+      // Backend unreachable — the local matching engine already handles PoS
+    }
+
     const summary = computeSummary(results);
 
     // Build a history record: one entry per invoice with its diagnosis severity.
@@ -240,7 +285,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       aiMethod,
       history: [record, ...prev.history],
     }));
-  }, [state.invoiceFiles, state.gstr2bEntries, state.isDemo]);
+  }, [state.invoiceFiles, state.gstr2bEntries, state.isDemo, lang, profile]);
 
 
   const reset = useCallback(() => {

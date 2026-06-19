@@ -3,9 +3,8 @@ import { View, StyleSheet, Animated, Easing } from 'react-native';
 import { Text } from '../components/AppText';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { LinearGradient } from 'expo-linear-gradient';
 import { ScanSearch, Lightbulb } from 'lucide-react-native';
-import { colors, typography, spacing, radii, gradients } from '../theme/tokens';
+import { colors, typography, spacing, radii } from '../theme/tokens';
 import { useI18n } from '../i18n/context';
 import { useSession } from '../data/contexts/session-context';
 import { RootStackParamList } from '../navigation/types';
@@ -129,13 +128,13 @@ export default function ProcessingScreen() {
   const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
 
   return (
-    <LinearGradient colors={gradients.splash} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.center}>
         {/* Spinning ring + pulsing icon */}
         <View style={styles.ringWrap}>
           <Animated.View style={[styles.ring, { transform: [{ rotate }] }]} />
           <Animated.View style={[styles.iconCard, { transform: [{ scale: pulse }] }]}>
-            <ScanSearch size={40} color={colors.surface} />
+            <ScanSearch size={40} color={colors.primary} />
           </Animated.View>
         </View>
 
@@ -156,47 +155,47 @@ export default function ProcessingScreen() {
         {/* Rotating GST tip — keeps the screen alive during the wait */}
         <Animated.View style={[styles.tipCard, { opacity: tipFade }]}>
           <View style={styles.tipHeader}>
-            <Lightbulb size={15} color={colors.surface} />
+            <Lightbulb size={15} color={colors.primary} />
             <Text style={styles.tipLabel}>{lang === 'hi' ? 'जानकारी' : 'Did you know'}</Text>
           </View>
           <Text style={styles.tipText}>{tips[tipIndex]}</Text>
         </Animated.View>
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: colors.background },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xl, gap: spacing.md },
   ringWrap: { width: 140, height: 140, justifyContent: 'center', alignItems: 'center', marginBottom: spacing.lg },
   ring: {
     position: 'absolute',
     width: 140, height: 140, borderRadius: 70,
     borderWidth: 4,
-    borderColor: 'rgba(255,255,255,0.2)',
-    borderTopColor: colors.surface,
+    borderColor: colors.border,
+    borderTopColor: colors.primary,
   },
   iconCard: {
     width: 90, height: 90, borderRadius: 26,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)',
+    backgroundColor: colors.surfaceRaised,
+    borderWidth: 1, borderColor: colors.border,
     justifyContent: 'center', alignItems: 'center',
   },
-  percent: { fontSize: 44, fontWeight: '800', color: colors.surface, letterSpacing: -1 },
-  status: { ...typography.heading2, color: 'rgba(255,255,255,0.95)', textAlign: 'center' },
+  percent: { fontSize: 44, fontWeight: '800', color: colors.ink, letterSpacing: -1 },
+  status: { ...typography.heading2, color: colors.ink, textAlign: 'center' },
   progressBar: {
     width: '80%', height: 8, borderRadius: 4,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: colors.surfaceRaised,
     overflow: 'hidden', marginTop: spacing.sm,
   },
-  progressFill: { height: '100%', borderRadius: 4, backgroundColor: colors.surface },
-  count: { ...typography.caption, color: 'rgba(255,255,255,0.8)', marginTop: spacing.xs },
+  progressFill: { height: '100%', borderRadius: 4, backgroundColor: colors.primary },
+  count: { ...typography.caption, color: colors.inkMuted, marginTop: spacing.xs },
   tipCard: {
     marginTop: spacing.xl,
     width: '90%',
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: colors.surface,
+    borderWidth: 1, borderColor: colors.border,
     borderRadius: radii.card,
     paddingVertical: spacing.md, paddingHorizontal: spacing.lg,
     gap: spacing.xs,
@@ -204,10 +203,10 @@ const styles = StyleSheet.create({
   tipHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   tipLabel: {
     ...typography.caption,
-    color: colors.surface,
+    color: colors.primary,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  tipText: { ...typography.body, color: 'rgba(255,255,255,0.92)', lineHeight: 21 },
+  tipText: { ...typography.body, color: colors.inkSecondary, lineHeight: 21 },
 });
