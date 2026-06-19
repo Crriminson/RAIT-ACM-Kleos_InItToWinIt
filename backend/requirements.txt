@@ -1,0 +1,21 @@
+# --- Core API (required to run the server) ---
+# Floors chosen so prebuilt wheels exist for Python 3.13 (no local compiler needed).
+fastapi>=0.115.0
+uvicorn>=0.30.0
+sqlalchemy>=2.0.36
+python-dotenv>=1.0.1
+pydantic>=2.9.0
+python-multipart>=0.0.9
+pillow>=11.0.0
+numpy>=2.1.0
+
+# --- Gemini: AI advisory endpoints + vision-based invoice OCR ---
+google-genai>=1.0.0
+
+# --- DB migrations (optional, not needed to run) ---
+alembic>=1.13.1
+
+# --- PaddleOCR fallback (optional, ~1GB; only used when no GEMINI_API_KEY is set) ---
+# paddlepaddle>=3.0.0
+# paddleocr>=3.5.0
+# opencv-python>=4.10.0
