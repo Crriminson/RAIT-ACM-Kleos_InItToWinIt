@@ -11,13 +11,13 @@
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.1",
     "@types/node": "^26.0.0",
-    "@types/react": "^19.2.17",
+    "@types/react": "^18.3.0",
     "autoprefixer": "^10.5.0",
-    "lucide-react": "^0.376.0",
+    "lucide-react": "latest",
     "next": "^16.2.9",
     "postcss": "^8.5.15",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "tailwindcss": "^4.3.1",
     "typescript": "^6.0.3"
   }
