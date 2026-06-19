@@ -1,4 +1,5 @@
-﻿import React from 'react';
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -22,12 +23,17 @@ import { ProfileProvider } from './src/data/contexts/profile-context';
 import { LockProvider, useLock } from './src/data/contexts/lock-context';
 import AppNavigator from './src/navigation/AppNavigator';
 import LockScreen from './src/screens/LockScreen';
+import ErrorBoundary from './src/components/ErrorBoundary';
+import OfflineBanner from './src/components/OfflineBanner';
 
-function LockGate({ children }: { children: React.ReactNode }) {
+function LockOverlay() {
   const { loaded, enabled, locked } = useLock();
-  if (!loaded) return null;
-  if (enabled && locked) return <LockScreen />;
-  return <>{children}</>;
+  if (!loaded || !enabled || !locked) return null;
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="auto">
+      <LockScreen />
+    </View>
+  );
 }
 
 export default function App() {
@@ -48,18 +54,22 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <I18nProvider>
-        <LockProvider>
-          <ProfileProvider>
-            <SessionProvider>
-              <LockGate>
+        <ErrorBoundary>
+          <LockProvider>
+            <ProfileProvider>
+              <SessionProvider>
                 <NavigationContainer>
-                  <StatusBar style="dark" />
-                  <AppNavigator />
+                  <StatusBar style="light" />
+                  <View style={{ flex: 1 }}>
+                    <AppNavigator />
+                    <OfflineBanner />
+                    <LockOverlay />
+                  </View>
                 </NavigationContainer>
-              </LockGate>
-            </SessionProvider>
-          </ProfileProvider>
-        </LockProvider>
+              </SessionProvider>
+            </ProfileProvider>
+          </LockProvider>
+        </ErrorBoundary>
       </I18nProvider>
     </SafeAreaProvider>
   );

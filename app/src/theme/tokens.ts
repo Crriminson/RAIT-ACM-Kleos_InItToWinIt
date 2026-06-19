@@ -7,7 +7,20 @@ export const colors = {
   inkSecondary: '#444444',
   inkMuted: '#888888',
   border: '#E8EAEF',
+  borderHover: '#D5D9E2',
   background: '#F4F6FA',
+  // A subtle filled surface used on top of white cards (chips, inputs, thumbnails).
+  surfaceRaised: '#F2F5FA',
+  // Muted accent tint for icon chips and highlighted zones.
+  accentMuted: '#EBF2FF',
+
+  // Semantic status colors (aliases of the severity palette below).
+  success: '#2E7D32',
+  warning: '#E65100',
+  error: '#D32F2F',
+  info: '#0288D1',
+  // Scrim behind bottom sheets / modals.
+  overlay: 'rgba(10, 10, 10, 0.5)',
 
   severity: {
     blocked: '#D32F2F',
@@ -81,6 +94,8 @@ export const radii = {
   badge: 20,
   input: 12,
   thumbnail: 8,
+  md: 12,
+  full: 9999,
 } as const;
 
 export const elevation = {

@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft } from 'lucide-react-native';
 import { colors, typography, spacing, elevation, gradients } from '../theme/tokens';
+import { useI18n } from '../i18n/context';
 
 type Variant = 'brand' | 'blocked' | 'pending' | 'resolved';
 
@@ -26,6 +27,7 @@ function gradientFor(variant: Variant) {
 }
 
 export default function GradientHeader({ title, subtitle, onBack, variant = 'brand', right }: Props) {
+  const { t } = useI18n();
   return (
     <LinearGradient
       colors={gradientFor(variant)}
@@ -36,7 +38,13 @@ export default function GradientHeader({ title, subtitle, onBack, variant = 'bra
       <SafeAreaView edges={['top']}>
         <View style={styles.row}>
           {onBack ? (
-            <TouchableOpacity style={styles.backButton} onPress={onBack} hitSlop={8}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={onBack}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t.a11y.back}
+            >
               <ChevronLeft size={24} color={colors.surface} />
             </TouchableOpacity>
           ) : (

@@ -1,11 +1,10 @@
-﻿import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, Animated, Dimensions } from 'react-native';
 import { Text } from '../components/AppText';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ScanSearch, IndianRupee, ArrowRight } from 'lucide-react-native';
-import { colors, typography, spacing, radii, gradients, elevation } from '../theme/tokens';
+import { IndianRupee, ArrowRight, HelpCircle } from 'lucide-react-native';
+import { colors, typography, spacing, radii, elevation } from '../theme/tokens';
 import { useI18n } from '../i18n/context';
 import { useProfile } from '../data/contexts/profile-context';
 import { RootStackParamList } from '../navigation/types';
@@ -20,17 +19,13 @@ export default function SplashScreen({ navigation }: Props) {
 
   const fade = useRef(new Animated.Value(0)).current;
   const rise = useRef(new Animated.Value(24)).current;
-  const iconScale = useRef(new Animated.Value(0.6)).current;
 
   useEffect(() => {
-    Animated.sequence([
-      Animated.spring(iconScale, { toValue: 1, friction: 6, tension: 80, useNativeDriver: true }),
-      Animated.parallel([
-        Animated.timing(fade, { toValue: 1, duration: 450, useNativeDriver: true }),
-        Animated.timing(rise, { toValue: 0, duration: 450, useNativeDriver: true }),
-      ]),
+    Animated.parallel([
+      Animated.timing(fade, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.timing(rise, { toValue: 0, duration: 600, useNativeDriver: true }),
     ]).start();
-  }, [fade, rise, iconScale]);
+  }, [fade, rise]);
 
   const handleStart = () => {
     if (profile) navigation.replace('Main');
@@ -38,27 +33,19 @@ export default function SplashScreen({ navigation }: Props) {
   };
 
   return (
-    <LinearGradient colors={gradients.splash} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.container}>
-      {/* Decorative floating circles */}
-      <View style={[styles.blob, styles.blob1]} />
-      <View style={[styles.blob, styles.blob2]} />
-
+    <View style={styles.container}>
       <SafeAreaView style={styles.safe}>
         <View style={styles.content}>
-          <Animated.View style={{ transform: [{ scale: iconScale }] }}>
-            <View style={styles.iconCard}>
-              <ScanSearch size={44} color={colors.surface} />
-            </View>
-          </Animated.View>
-
           <Animated.View style={{ opacity: fade, transform: [{ translateY: rise }] }}>
             <Text style={styles.brand}>CA IN YOUR POCKET</Text>
+
             <Text style={styles.headline}>{t.splash.headline}</Text>
+
             <Text style={styles.subheadline}>{t.splash.subheadline}</Text>
 
             {/* Value chip */}
             <View style={styles.valueChip}>
-              <IndianRupee size={16} color="#FFD23F" />
+              <IndianRupee size={16} color={colors.primary} />
               <Text style={styles.valueChipText}>
                 {t.splash.headline === 'अपना GST खुद समझें'
                   ? 'हर महीने ₹हज़ारों की ITC बचाएं'
@@ -69,95 +56,138 @@ export default function SplashScreen({ navigation }: Props) {
         </View>
 
         <Animated.View style={[styles.bottom, { opacity: fade }]}>
-          <TouchableOpacity style={styles.cta} activeOpacity={0.9} onPress={handleStart}>
+          <TouchableOpacity
+            style={styles.cta}
+            activeOpacity={0.85}
+            onPress={handleStart}
+            accessibilityRole="button"
+            accessibilityLabel={t.splash.cta}
+          >
             <Text style={styles.ctaText}>{t.splash.cta}</Text>
-            <ArrowRight size={20} color={colors.primary} />
+            <ArrowRight size={20} color="#FFFFFF" />
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={toggle} style={styles.langToggle}>
+          <TouchableOpacity
+            style={styles.newUserCta}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('OnboardingWalkthrough')}
+            accessibilityRole="button"
+            accessibilityLabel={t.a11y.newUser}
+          >
+            <HelpCircle size={16} color={colors.primary} />
+            <Text style={styles.newUserText}>{t.splash.newUserCta}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={toggle}
+            style={styles.langToggle}
+            hitSlop={{ top: 8, bottom: 8, left: 16, right: 16 }}
+            accessibilityRole="button"
+            accessibilityLabel={t.a11y.switchLanguage}
+          >
             <Text style={styles.langToggleText}>{t.splash.switchLang}</Text>
           </TouchableOpacity>
         </Animated.View>
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  safe: { flex: 1, paddingHorizontal: spacing.screenH },
-  blob: { position: 'absolute', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.08)' },
-  blob1: { width: width * 0.9, height: width * 0.9, top: -width * 0.35, right: -width * 0.3 },
-  blob2: { width: width * 0.7, height: width * 0.7, bottom: -width * 0.2, left: -width * 0.25 },
-  content: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  iconCard: {
-    width: 96,
-    height: 96,
-    borderRadius: 28,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  safe: {
+    flex: 1,
+    paddingHorizontal: spacing.screenH,
+  },
+  content: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.xl,
   },
   brand: {
     ...typography.label,
-    color: 'rgba(255,255,255,0.7)',
+    color: colors.primary,
     fontSize: 13,
-    letterSpacing: 2,
+    letterSpacing: 3,
+    textTransform: 'uppercase',
     textAlign: 'center',
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   headline: {
-    fontSize: 30,
+    fontSize: 48,
     fontWeight: '800',
-    color: colors.surface,
+    color: colors.ink,
     textAlign: 'center',
-    lineHeight: 38,
+    lineHeight: 52,
     marginBottom: spacing.sm,
   },
   subheadline: {
     ...typography.body,
-    color: 'rgba(255,255,255,0.85)',
+    color: colors.inkSecondary,
     textAlign: 'center',
     paddingHorizontal: spacing.md,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
   },
   valueChip: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'center',
     gap: spacing.sm,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: colors.border,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radii.badge,
   },
   valueChipText: {
     ...typography.label,
-    color: colors.surface,
+    color: colors.ink,
     fontWeight: '600',
   },
-  bottom: { paddingBottom: spacing.lg, gap: spacing.sm },
+  bottom: {
+    paddingBottom: spacing.lg,
+    gap: spacing.sm,
+  },
   cta: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.primary,
     height: 56,
-    borderRadius: radii.button,
+    borderRadius: 9999,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     gap: spacing.sm,
-    ...elevation.modal,
+    ...elevation.primary,
   },
   ctaText: {
     ...typography.label,
-    color: colors.primary,
+    color: '#FFFFFF',
     fontSize: 17,
     fontWeight: '700',
   },
-  langToggle: { alignItems: 'center', paddingVertical: spacing.sm },
-  langToggleText: { ...typography.body, color: 'rgba(255,255,255,0.9)', fontWeight: '500' },
+  newUserCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+  },
+  newUserText: {
+    ...typography.label,
+    color: colors.primary,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  langToggle: {
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+  },
+  langToggleText: {
+    ...typography.body,
+    color: colors.inkMuted,
+    fontWeight: '500',
+  },
 });

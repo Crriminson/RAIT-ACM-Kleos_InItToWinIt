@@ -23,7 +23,13 @@ export default function GradientButton({
 }: Props) {
   if (disabled) {
     return (
-      <View style={[styles.button, styles.disabled, style]}>
+      <View
+        style={[styles.button, styles.disabled, style]}
+        accessible
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityState={{ disabled: true }}
+      >
         <Text style={styles.disabledLabel}>{label}</Text>
       </View>
     );
@@ -36,6 +42,8 @@ export default function GradientButton({
       activeOpacity={0.85}
       onPress={onPress}
       style={[styles.shadow, style]}
+      accessibilityRole="button"
+      accessibilityLabel={label}
     >
       <LinearGradient
         colors={gradient}
