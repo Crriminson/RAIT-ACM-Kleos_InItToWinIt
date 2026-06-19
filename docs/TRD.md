@@ -59,6 +59,7 @@ Step [0] currently has **no owner or build slot** and everything downstream depe
 
 - **GSTR-2A-based supplier non-filing early warning** — reuses data already ingested for reconciliation (comparing purchase-register dates against supplier 2A filing dates); no new OCR or bot infrastructure required.
 - **WhatsApp bot stub** — one hardcoded test contact/image routed through the real, working pipeline live in the demo, explicitly disclosed as a working prototype of the ingestion channel rather than a complete integration. Gated at a build-time checkpoint (conceptually ~70%, not yet converted to a clock time — see Section 11).
+- **E-invoice eligibility alert + guide** — fires when the trader's tracked/self-reported turnover crosses ₹5 crore. Unlocks a short, static walkthrough (list of the 6 authorized IRPs, registration steps, deep-link to einvoice.gst.gov.in). Explicitly **does not** submit, register, or generate an IRN on the trader's behalf — researched and confirmed (Session 1) that both direct-IRP-API and GSP-API paths require the taxpayer's own credentials and a per-session OTP, making silent/automated submission infeasible regardless of app architecture.
 
 ### 2.3 Explicitly out of scope (cut or roadmap-only)
 
@@ -101,6 +102,7 @@ The original framing (Thread 001) proposed an **installable native or PWA mobile
 9. **Action-execution mini-walkthrough** — a small, explicitly-demoed walkthrough (screenshots or short voice narration) for the 3 possible IMS actions only, framed in the pitch as a deliberate choice not to auto-file (since ITC stakes are real and hard-blocked as of April 2026), not as a hidden limitation.
 10. **Validation harness** — 10–15 dummy invoices with deliberately planted, known outcomes, built before the matching logic is written, with expected-vs-actual tracking; any mismatch on a planted case is treated as the highest-priority bug.
 11. *(Stretch)* **GSTR-2A early-warning module** and **WhatsApp bot stub**, as described in Section 2.2.
+12. *(Stretch)* **E-invoice eligibility alert + guide module** — compares tracked/self-reported turnover against the ₹5 crore threshold; on crossing, surfaces an alert and a static informational walkthrough (IRP list, registration steps, deep-link out). No submission/IRN-generation logic — purely informational, no live GST integration. Depends on a turnover-tracking mechanism not yet chosen (see Section 11).
 
 ---
 
@@ -125,7 +127,8 @@ The original framing (Thread 001) proposed an **installable native or PWA mobile
 |---|---|---|
 | Bhashini API | **In use (MVP)** | Free, government-backed multilingual translation/OCR platform; satisfies the multilingual requirement without a custom translation layer. |
 | GST portal backend APIs | **Not available** | Confirmed hard constraint — third-party developers cannot reach GSTN directly. |
-| GSP (GST Suvidha Provider) sandbox APIs, e.g. WhiteBooks, MasterGST | **Roadmap/pitch only — not a hackathon build item** | Free sandbox credentials exist for GSTR-2B/ITC reconciliation building; this is the legitimate production path for the future, not used during the hackathon (Simulation Clause is used instead). |
+| GSP (GST Suvidha Provider) sandbox APIs, e.g. WhiteBooks, MasterGST | **Roadmap/pitch only — not a hackathon build item** | Free sandbox credentials exist for GSTR-2B/ITC reconciliation building; this is the legitimate production path for the future, not used during the hackathon (Simulation Clause is used instead). **Researched (Session 1):** even in production, GSP submission requires OAuth2 + the taxpayer's own GSTIN credentials and a per-session OTP sent to the registered mobile/email — there is no mode where the app submits silently on the trader's behalf. Direct-to-IRP access (bypassing a GSP) is gated by a turnover threshold reported inconsistently across sources (₹5 crore per ClearTax vs. ₹100 crore per Masters India) and still requires the taxpayer's own portal registration. |
+| Turnover lookup by GSTIN | **Not available, free or official** | **Researched (Session 1):** the public GST portal's "Search Taxpayer by GSTIN" does not expose turnover — only filing status. Actual turnover is only visible to the taxpayer themselves via their filed GSTR-9. Third-party "turnover lookup" APIs exist but are unofficial, paid, scraping-based, and of unverified accuracy — not suitable as a trigger for a compliance alert. |
 | OCR engine (PaddleOCR or vision-capable LLM API) | **Open decision** | Either self-hosted OCR or an external LLM vision API; not yet chosen. |
 | WhatsApp Business API | **Stretch-only, stubbed** | If attempted: a single hardcoded test contact/image routed through the real pipeline, not a production-approved business account. Not a core integration. |
 
@@ -190,6 +193,7 @@ No specific schema, field types, or storage volumes were defined in the source m
 - **Final accuracy-validation methodology** — beyond the 10–15 planted dummy invoices, how mismatches/edge cases will be scored and what threshold constitutes "passing."
 - **Exact format/schema of the Simulation Clause dataset** — referenced only generically as "a PDF/spreadsheet downloadable from the portal"; specific fields and file format are not pinned down.
 - **OCR engine choice** — self-hosted (PaddleOCR) vs. vision-capable LLM API; both proposed, no decision made.
+- **Turnover-tracking mechanism for the e-invoice eligibility alert** — self-reported at onboarding vs. a running total computed from ingested invoices vs. both; not yet chosen. No free/official GSTIN→turnover lookup exists (confirmed via research, Session 1), so this cannot be solved by an external API call.
 
 ---
 

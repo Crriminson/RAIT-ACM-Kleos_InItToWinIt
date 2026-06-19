@@ -48,6 +48,7 @@
 - Not a full offline-first architecture — simplified to "queue capture, send when network returns."
 - Not building a live GSP-sandbox integration for the hackathon itself (roadmap/pitch mention only).
 - Not serving a CA managing multiple client businesses.
+- **Not submitting e-invoices / generating IRNs on the trader's behalf** — confirmed out of scope after research (Session 1): both the direct-IRP-API path and the GSP-API path require the taxpayer's own registered credentials and a per-session OTP, so the app cannot silently submit on a trader's behalf regardless of architecture. Only an **eligibility alert + educational guide + deep-link to the official IRP** is in scope. `[CONFIRMED]`
 
 ---
 
@@ -85,6 +86,7 @@ Characteristics:
 
 - GSTR-2A-based supplier non-filing early warning (low build cost — reuses already-ingested data).
 - WhatsApp bot stub: a single hardcoded test case (one pre-set contact/image) routed through the real, working pipeline, clearly disclosed as a working prototype of the channel — not implied as a complete integration.
+- **E-Invoice eligibility alert + guide:** when a trader's tracked/self-reported turnover crosses ₹5 crore (the notified e-invoicing threshold), proactively surface an alert plus a short walkthrough (the 6 IRPs, how to register, deep-link to einvoice.gst.gov.in). No live submission, no IRN generation by the app — informational only. `[COUNCIL REC – NOT VALIDATED]`
 
 ### Cut / Roadmap-Only (reconfirmed across multiple council passes)
 
@@ -101,6 +103,7 @@ Supplier Risk Scoring, Auto-Dispute Generation (or CA-only, later), Cashflow For
 - As a trader, I want a monthly summary so I can see, at a glance, how much ITC I'm at risk of losing across all my invoices.
 - As a trader, if I don't understand or disagree with a recommendation, I want an easy way to flag that.
 - As a judge, I want to see a polished landing page and a credible working pipeline (including, if achieved, a believable WhatsApp capture moment) without the demo overstating what's actually built.
+- As a trader whose turnover crosses ₹5 crore, I want to be alerted that e-invoicing now applies to me and shown how to get started — without the app filing or submitting anything to the government on my behalf.
 
 ---
 
@@ -138,6 +141,7 @@ Supplier Risk Scoring, Auto-Dispute Generation (or CA-only, later), Cashflow For
 - `[OPEN]` Who on the team owns watching the build-time checkpoint — unknown.
 - `[OPEN]` Monetisation/pricing narrative for the landing page — unknown.
 - `[OPEN]` Verdict screen content/layout — completely undesigned; flagged twice by the council as priority #1 and not yet started.
+- `[OPEN]` **Turnover determination method for the e-invoice eligibility alert.** Confirmed via research (Session 1): there is no free/official way to look up a business's turnover from its GSTIN — the public GST portal's GSTIN search does not expose turnover, and third-party "turnover lookup" APIs are unofficial, paid, and of unverified accuracy. The alert must therefore rely on either (a) self-reported turnover at onboarding, or (b) a running total computed from the trader's own ingested invoices — mechanism not yet chosen.
 
 ---
 
