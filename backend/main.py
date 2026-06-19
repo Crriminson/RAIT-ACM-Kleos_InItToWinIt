@@ -44,14 +44,7 @@ app.include_router(analyze_compat.router)  # app-compatible JSON endpoint at /ap
 app.include_router(ai_router.router)       # app-compatible AI endpoints (gst-doubt, ai-advice, ...)
 
 
-@app.on_event("startup")
-async def _warm_ocr_models() -> None:
-    """Load the offline OCR models in the background at startup so the first
-    invoice scan isn't a cold start. Non-blocking: the server is ready
-    immediately; warmup finishes a few seconds later."""
-    import threading
-    from core import ocr
-    threading.Thread(target=ocr.warmup, name="ocr-warmup", daemon=True).start()
+
 
 
 @app.get("/api/health", tags=["meta"])

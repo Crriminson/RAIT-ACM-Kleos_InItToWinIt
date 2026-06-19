@@ -179,14 +179,14 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           extracted.push(invoice);
           if (method === 'gemini') aiMethod = 'gemini';
           else if (aiMethod !== 'gemini') aiMethod = 'fallback';
-        } catch {
+        } catch (e) { console.error("Extraction failed:", e); alert("Extraction failed: " + e);
           // Server unreachable or file unreadable — keep going; we'll guard below.
         }
         setState((prev) => ({ ...prev, processingProgress: { current: i + 1, total: realFiles.length } }));
       }
-      // Safety net: if nothing extracted (e.g. server down), fall back to mock so the demo never dead-ends.
-      invoices = extracted.length > 0 ? extracted : mockInvoices;
-    } else {
+        // STRICTLY use extracted data, NO mock fallback.
+        invoices = extracted;
+      } else {
       // Demo / no real files: simulate progress for the animation, use the curated mock set.
       for (let i = 0; i < totalInvoices; i++) {
         await new Promise((resolve) => setTimeout(resolve, 350));
@@ -195,7 +195,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       invoices = mockInvoices;
     }
 
-    const gstr2b = state.gstr2bEntries.length > 0 ? state.gstr2bEntries : mockGstr2b;
+      // If doing real extraction, strictly use uploaded GSTR-2B (even if empty).
+      const gstr2b = useRealExtraction ? state.gstr2bEntries : (state.gstr2bEntries.length > 0 ? state.gstr2bEntries : mockGstr2b);
 
     const results = runDiagnosis(invoices, gstr2b);
     const summary = computeSummary(results);

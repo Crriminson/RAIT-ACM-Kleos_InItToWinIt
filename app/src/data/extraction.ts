@@ -76,6 +76,11 @@ export function mapExtractedToInvoice(
  * and return it as an Invoice. Throws if the file can't be read or the
  * server is unreachable (caller decides how to handle).
  *
+ * OCR pipeline:
+ *   1. ML Kit (on-device, instant, no network) → ocrText sent to backend
+ *   2. Backend extracts fields from ocrText (regex + spatial matching)
+ *   3. If ML Kit text is empty/non-invoice → backend uses Gemini vision fallback
+ *
  * @param traderGstin  The trader's own GSTIN (from ProfileContext). Used to
  *                     determine intra-state vs inter-state tax split.
  */
@@ -86,10 +91,29 @@ export async function extractInvoiceFromFile(
 ): Promise<{ invoice: Invoice; method: AiMethod }> {
   const base64Data = await readAssetBase64({ uri: file.uri });
 
+  // Step 1: Run ML Kit OCR on-device (fast, no network required)
+  let ocrText: string | undefined;
+  try {
+    const { runOCR, looksLikeInvoice } = await import('../ocr/mlkit');
+    const ocr = await runOCR(file.uri);
+    if (ocr.text && looksLikeInvoice(ocr.text)) {
+      ocrText = ocr.text;
+    } else if (ocr.error) {
+      console.warn('[OCR] ML Kit failed:', ocr.error);
+    } else {
+      console.warn('[OCR] ML Kit produced non-invoice text, passing to Gemini fallback');
+    }
+  } catch (err) {
+    // ML Kit module not available (e.g. running in Expo Go) — skip silently.
+    console.warn('[OCR] ML Kit unavailable, skipping on-device OCR:', err);
+  }
+
+  // Step 2: Send to backend — ocrText is used as primary; base64 for Gemini fallback
   const { data, method } = await analyzeInvoice({
     base64Data,
     mimeType: guessMime(file),
     fileName: file.name,
+    ocrText,
   });
 
   return { invoice: mapExtractedToInvoice(data, id, file.uri, traderGstin), method };

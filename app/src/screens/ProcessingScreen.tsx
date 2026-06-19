@@ -18,7 +18,7 @@ const STATUS_HI = [
   'लगभग हो गया...',
 ];
 const STATUS_EN = [
-  'Reading invoices...',
+  'Scanning invoice on device...',
   'Matching with GSTR-2B...',
   'Checking HSN codes...',
   'Calculating ITC impact...',
@@ -44,10 +44,10 @@ const TIPS_HI = [
   'GSTR-2B एक लॉक मासिक स्नैपशॉट है — कोई लाइव फीड नहीं।',
 ];
 
-// Rough expectation used only to pace the animated %. The real result drives
-// the actual floor; this just keeps the number moving between checkpoints.
-const EST_MS_PER_INVOICE = 26000;
-const COLD_BUFFER_MS = 8000;
+// OCR now runs on-device (ML Kit) — typical latency is 0.3-1s per invoice.
+// This just paces the animated % bar so it feels smooth.
+const EST_MS_PER_INVOICE = 3000;
+const COLD_BUFFER_MS = 1500;
 
 export default function ProcessingScreen() {
   const { lang } = useI18n();

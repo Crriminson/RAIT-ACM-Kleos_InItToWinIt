@@ -1,33 +1,29 @@
 """
-api/routes/analyze_compat.py  ─  App-compatible OCR route
+api/routes/analyze_compat.py  --  App-compatible OCR route
 
 The React Native app sends:
     POST /api/analyze-invoice
     Content-Type: application/json
-    { "base64Data": "<base64 string>", "mimeType": "image/png", "fileName": "scan.png" }
+    {
+      "base64Data": "<base64 string>",
+      "mimeType":   "image/png",
+      "fileName":   "scan.png",
+      "ocrText":    "<plain text from ML Kit>"   <- optional, on-device OCR
+    }
 
 And expects back:
-    { "method": "fallback", "data": { "supplierName", "supplierGSTIN",
-      "invoiceNumber", "invoiceDate", "taxableValue", "totalTax", "items" } }
+    { "method": "mlkit"|"gemini"|"fallback", "data": { ... } }
 
-This route acts as an adapter:
-  1. Decodes the base64 image
-  2. Runs the full OCR → extract → match → recommend pipeline
-  3. Returns the ExtractedInvoiceData shape the app expects
-
-The app's matching engine (matching-engine.ts) runs client-side, so we only
-need to return the extracted fields — the verdict from recommend() is attached
-as extra metadata the app ignores gracefully.
-
-If extraction fails, we return a best-effort empty shell so the app can fall
-back to mock data rather than hard-crashing.
+OCR pipeline (primary -> fallback chain):
+  1. ocrText provided (ML Kit ran on-device) -> parse fields directly (no server OCR)
+  2. ocrText absent/empty                    -> Gemini vision with base64 image
+  3. Both fail                               -> empty shell (app uses mock data)
 """
 from __future__ import annotations
 
 import base64
 import logging
-import uuid
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
@@ -38,16 +34,15 @@ from api.deps import get_db
 from core import gemini
 from core.extractor import extract_invoice
 from core.matcher import match_invoice
-from core.ocr import extract_text
 from core.recommender import recommend
-from models.extraction import ExtractionError
+from models.extraction import ExtractionError, OCRToken, RawOCRResult
 from models.gstr2b import GSTR2BRecord
 
 log = logging.getLogger(__name__)
 
 router = APIRouter(tags=["app-compat"])
 
-# Vision prompt for Gemini-based extraction (mirrors the previous Node server).
+# Vision prompt for Gemini-based extraction (fallback when ML Kit text is unavailable).
 _VISION_PROMPT = (
     "You are an expert Indian Chartered Accountant (CA) and tax audit bot.\n"
     "Extract all relevant details from this Indian GST invoice and return ONLY JSON "
@@ -92,19 +87,76 @@ def _normalise_vision(data: dict[str, Any]) -> dict[str, Any]:
         "items":         items,
     }
 
+
+def _text_to_raw_ocr_result(text: str) -> RawOCRResult:
+    """
+    Convert plain text (from ML Kit on-device OCR) into a RawOCRResult that
+    the spatial field extractor can process.
+
+    Since ML Kit does not return bounding boxes in the format our extractor
+    expects, we synthesise tokens with layout coordinates that preserve the
+    left-to-right, top-to-bottom reading order:
+      - Each line gets a unique Y coordinate (row_height * line_index).
+      - Each word within a line gets sequential X coordinates.
+      - Confidence is set to 1.0 (ML Kit already filtered low-confidence text).
+
+    This is enough for the regex + label-proximity extractor to locate
+    GSTIN, invoice number, dates, and tax amounts on typical GST invoices.
+    """
+    ROW_HEIGHT = 24      # px between line centres (virtual)
+    CHAR_WIDTH = 9       # px per character (proportional font approximation)
+    MARGIN_X   = 10      # px left margin
+
+    tokens: list[OCRToken] = []
+    lines = text.splitlines()
+    max_line_width = max((len(l) for l in lines if l.strip()), default=80) * CHAR_WIDTH
+
+    for line_idx, line in enumerate(lines):
+        line = line.strip()
+        if not line:
+            continue
+
+        cy = ROW_HEIGHT * line_idx + ROW_HEIGHT // 2
+        y1 = cy - ROW_HEIGHT // 2
+        y2 = cy + ROW_HEIGHT // 2
+
+        # Tokenise by whitespace -- mirrors how PaddleOCR splits words
+        words = line.split()
+        x_cursor = float(MARGIN_X)
+        for word in words:
+            w = len(word) * CHAR_WIDTH
+            tokens.append(OCRToken(
+                text=word,
+                confidence=1.0,          # ML Kit already high-confidence
+                x1=x_cursor,
+                y1=float(y1),
+                x2=x_cursor + w,
+                y2=float(y2),
+            ))
+            x_cursor += w + CHAR_WIDTH   # inter-word gap
+
+    image_height = ROW_HEIGHT * (len(lines) + 1)
+    return RawOCRResult(
+        tokens=tokens,
+        image_width=max(max_line_width, 800),
+        image_height=max(image_height, 400),
+        processing_time_ms=0.0,   # OCR happened on-device
+    )
+
+
 # ---------------------------------------------------------------------------
 # Request / response models
 # ---------------------------------------------------------------------------
 
 class AnalyzeInvoiceRequest(BaseModel):
-    base64Data: str = Field(..., description="Base64-encoded image bytes")
-    mimeType: str   = Field("image/jpeg", description="MIME type of the image")
-    fileName: str   = Field("invoice.jpg", description="Original filename")
+    base64Data: str           = Field(...,           description="Base64-encoded image bytes")
+    mimeType:   str           = Field("image/jpeg",  description="MIME type of the image")
+    fileName:   str           = Field("invoice.jpg", description="Original filename")
+    ocrText:    Optional[str] = Field(None,          description="On-device ML Kit OCR text (primary path)")
 
 
-# Shape the app expects back (mirrors ExtractedInvoiceData in api/ai.ts)
 def _build_extracted_data(extracted) -> dict[str, Any]:
-    """Map ExtractedInvoice → ExtractedInvoiceData (app shape)."""
+    """Map ExtractedInvoice -> ExtractedInvoiceData (app shape)."""
     total_cgst = extracted.cgst or 0.0
     total_sgst = extracted.sgst or 0.0
     total_igst = extracted.igst or 0.0
@@ -121,7 +173,6 @@ def _build_extracted_data(extracted) -> dict[str, Any]:
             "taxAmount":    item_tax,
         })
 
-    # If no line items were extracted, synthesise one from header totals
     if not items and (extracted.taxable_value or 0) > 0:
         hsn = extracted.hsn_codes[0] if extracted.hsn_codes else ""
         items = [{
@@ -170,12 +221,58 @@ async def analyze_invoice_compat(
     db: Session = Depends(get_db),
 ) -> JSONResponse:
     """
-    App-compatible endpoint used by the React Native client.
+    Primary path (ML Kit on-device OCR):
+        Accepts ocrText (plain text from on-device ML Kit), synthesises OCR
+        tokens, and runs the field extractor locally. Fast, no network needed.
 
-    Accepts base64 image JSON, runs OCR + extraction pipeline,
-    and returns ExtractedInvoiceData in the shape api/ai.ts expects.
+    Fallback path (Gemini vision):
+        When ocrText is absent or field extraction fails, uses Gemini vision
+        to extract fields from the base64 image. Requires GEMINI_API_KEY.
+
+    Last resort:
+        Returns an empty shell so the app never hard-crashes.
     """
-    # 1. Decode base64 → bytes
+    extraction_note: str | None = None
+    extracted = None
+
+    # -- PRIMARY: ML Kit on-device OCR text ----------------------------------
+    if body.ocrText and body.ocrText.strip():
+        log.info("Using ML Kit on-device OCR text (%d chars)", len(body.ocrText))
+        try:
+            raw_ocr   = _text_to_raw_ocr_result(body.ocrText)
+            extracted = extract_invoice(raw_ocr)
+        except ExtractionError as exc:
+            extraction_note = exc.detail
+            log.warning("Field extraction from ML Kit text failed (%s) -- trying Gemini fallback", exc.detail)
+        except Exception as exc:  # noqa: BLE001
+            extraction_note = str(exc)
+            log.warning("Unexpected error during ML Kit extraction (%s) -- trying Gemini fallback", exc)
+
+        if extracted is not None:
+            extra_meta: dict[str, Any] = {}
+            try:
+                gstr2b_records: list[GSTR2BRecord] = db.query(GSTR2BRecord).all()
+                if gstr2b_records:
+                    match_result = match_invoice(extracted, gstr2b_records)
+                    verdict      = recommend(match_result, extracted)
+                    extra_meta   = {
+                        "action":         verdict.action,
+                        "severity":       verdict.severity,
+                        "reason_code":    verdict.reason_code,
+                        "itc_impact_inr": verdict.itc_impact_inr,
+                    }
+            except Exception:
+                log.exception("Match/recommend step failed (non-fatal)")
+
+            return JSONResponse(status_code=200, content={
+                "method": "mlkit",
+                "data":   _build_extracted_data(extracted),
+                **extra_meta,
+            })
+    else:
+        log.info("No ocrText provided -- going straight to Gemini vision fallback")
+
+    # -- FALLBACK: Gemini vision ---------------------------------------------
     try:
         raw_b64 = body.base64Data
         if "," in raw_b64:
@@ -193,45 +290,6 @@ async def analyze_invoice_compat(
             detail={"error": "empty_image", "detail": "Decoded image is empty."},
         )
 
-    # 2. Offline OCR pipeline (PRIMARY) — our own PaddleOCR + extractor.
-    #    Deterministic, runs with no network/API dependency. If OCR or field
-    #    extraction fails (unreadable/unusual invoice), we fall back to Gemini.
-    extracted = None
-    extraction_note: str | None = None
-    try:
-        raw_ocr   = extract_text(image_bytes)
-        extracted = extract_invoice(raw_ocr)
-    except ExtractionError as exc:
-        extraction_note = exc.detail
-        log.warning("Offline extraction failed (%s) — trying Gemini fallback", exc.detail)
-    except Exception as exc:  # noqa: BLE001 — OCR engine error
-        extraction_note = str(exc)
-        log.warning("Offline OCR failed (%s) — trying Gemini fallback", exc)
-
-    if extracted is not None:
-        # Best-effort match + verdict (not required for the app flow).
-        extra_meta: dict[str, Any] = {}
-        try:
-            gstr2b_records: list[GSTR2BRecord] = db.query(GSTR2BRecord).all()
-            if gstr2b_records:
-                match_result = match_invoice(extracted, gstr2b_records)
-                verdict      = recommend(match_result, extracted)
-                extra_meta   = {
-                    "action":         verdict.action,
-                    "severity":       verdict.severity,
-                    "reason_code":    verdict.reason_code,
-                    "itc_impact_inr": verdict.itc_impact_inr,
-                }
-        except Exception:
-            log.exception("Match/recommend step failed in compat route (non-fatal)")
-
-        return JSONResponse(status_code=200, content={
-            "method": "paddleocr",        # our offline OCR + extractor
-            "data":   _build_extracted_data(extracted),
-            **extra_meta,
-        })
-
-    # 3. Gemini vision fallback — only when the offline pipeline couldn't read it.
     if gemini.has_key():
         try:
             vision = gemini.generate_json_from_image(
@@ -243,10 +301,10 @@ async def analyze_invoice_compat(
                 "_offline_note": extraction_note,
             })
         except Exception as exc:  # noqa: BLE001
-            log.warning("Gemini vision fallback also failed: %s", exc)
+            log.warning("Gemini vision fallback failed: %s", exc)
             extraction_note = f"{extraction_note} | gemini: {exc}"
 
-    # 4. Both paths failed — empty shell so the app uses its own mock and never crashes.
+    # -- LAST RESORT: empty shell --------------------------------------------
     return JSONResponse(status_code=200, content={
         "method": "fallback",
         "data":   _empty_extracted_data(),

@@ -1,7 +1,7 @@
 import { AI_API_URL } from '../config';
 import { Language } from '../i18n/strings';
 
-export type AiMethod = 'gemini' | 'fallback';
+export type AiMethod = 'mlkit' | 'gemini' | 'paddleocr' | 'fallback';
 
 export interface ExtractedInvoiceData {
   supplierName: string;
@@ -54,10 +54,10 @@ export interface InvoiceForCompare {
   items: unknown[];
 }
 
-// Offline OCR (PaddleOCR) runs ~24s/invoice on CPU, more on a cold first scan,
-// so the per-request budget must comfortably exceed that. 45s was too tight and
-// could abort a slow scan mid-flight.
-const TIMEOUT_MS = 120000;
+// OCR now runs on-device (ML Kit) — the backend only parses fields from text.
+// 30s is generous; the server round-trip is typically <2s for text extraction.
+// Gemini vision fallback can take up to 10-15s, so we keep headroom.
+const TIMEOUT_MS = 30000;
 
 async function postJson<T>(path: string, body: unknown): Promise<T> {
   const controller = new AbortController();
@@ -93,6 +93,8 @@ export async function analyzeInvoice(args: {
   base64Data: string;
   mimeType: string;
   fileName: string;
+  /** On-device OCR text (ML Kit). When provided, the backend skips server-side OCR. */
+  ocrText?: string;
 }): Promise<{ method: AiMethod; data: ExtractedInvoiceData }> {
   const r = await postJson<{ method: AiMethod; data: ExtractedInvoiceData }>(
     '/api/analyze-invoice',

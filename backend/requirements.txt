@@ -12,10 +12,8 @@ numpy>=2.1.0
 # --- Gemini: AI advisory endpoints + vision-based invoice OCR ---
 google-genai>=1.0.0
 
-# --- DB migrations (optional, not needed to run) ---
-alembic>=1.13.1
-
-# --- PaddleOCR fallback (optional, ~1GB; only used when no GEMINI_API_KEY is set) ---
-# paddlepaddle>=3.0.0
-# paddleocr>=3.5.0
-# opencv-python>=4.10.0
+# --- OCR architecture note ---
+# OCR now runs ON-DEVICE via ML Kit (app/src/ocr/mlkit.ts).
+# The backend receives plain text (ocrText) and only does field extraction.
+# PaddleOCR is NOT used. Gemini vision is the fallback when ocrText is absent.
+# (paddlepaddle / paddleocr / opencv-python are not needed)
