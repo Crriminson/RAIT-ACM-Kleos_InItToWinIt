@@ -65,7 +65,7 @@ export type Severity = 'blocked' | 'pending' | 'resolved';
  * - NOT_ON_IMS_YET: supplier hasn't filed yet, so there is no IMS entry for the trader
  *   to act on. The trader should follow up with the supplier, not look for a portal button.
  */
-export type ImsAction = 'ACCEPT' | 'HOLD' | 'NOT_ON_IMS_YET' | 'VERIFY';
+export type ImsAction = 'ACCEPT' | 'HOLD' | 'REJECT' | 'NOT_ON_IMS_YET' | 'VERIFY';
 
 export interface DiagnosisResult {
   id: string;

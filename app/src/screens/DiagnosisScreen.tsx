@@ -110,10 +110,11 @@ function PulseRing({ color }: { color: string }) {
 // ── IMS Action Badge (FEATURE-013) ──────────────────────────────────────────
 // Dark-mode IMS colors: dark tinted backgrounds with lighter accent text
 const IMS_COLORS: Record<ImsAction, { bg: string; text: string }> = {
-  ACCEPT:       { bg: colors.severity.resolvedBg, text: colors.severity.resolved },
-  HOLD:         { bg: colors.severity.pendingBg,  text: colors.severity.pending },
-  NOT_ON_IMS_YET: { bg: colors.surfaceRaised,     text: colors.inkMuted },
-  VERIFY:       { bg: '#0A0F1A',                  text: '#3B82F6' },
+  ACCEPT:         { bg: colors.severity.resolvedBg, text: colors.severity.resolved },
+  HOLD:           { bg: colors.severity.pendingBg,  text: colors.severity.pending },
+  REJECT:         { bg: colors.severity.blockedBg,  text: colors.severity.blocked },
+  NOT_ON_IMS_YET: { bg: colors.surfaceRaised,       text: colors.inkMuted },
+  VERIFY:         { bg: '#0A0F1A',                  text: '#3B82F6' },
 };
 
 function ActionBadge({ action, lang }: { action: ImsAction; lang: 'hi' | 'en' }) {
@@ -122,6 +123,7 @@ function ActionBadge({ action, lang }: { action: ImsAction; lang: 'hi' | 'en' })
   const label =
     action === 'ACCEPT'         ? t.diagnosis.imsAccept
     : action === 'HOLD'         ? t.diagnosis.imsHold
+    : action === 'REJECT'       ? (lang === 'hi' ? 'REJECT करें' : 'REJECT')
     : action === 'VERIFY'       ? (lang === 'hi' ? 'जाँच करें' : 'Verify')
     : t.diagnosis.imsNotYet;
 

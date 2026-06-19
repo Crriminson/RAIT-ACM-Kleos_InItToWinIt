@@ -16,6 +16,7 @@ from api.routes import verdicts as verdicts_router
 from api.routes import summary as summary_router
 from api.routes import early_warning as early_warning_router
 from api.routes import chat as chat_router
+from api.routes import webhooks as webhooks_router
 from core import gemini
 from db.session import Base, engine
 
@@ -52,6 +53,7 @@ app.include_router(verdicts_router.router, prefix="/api/v1")
 app.include_router(summary_router.router, prefix="/api/v1")
 app.include_router(early_warning_router.router, prefix="/api/v1")
 app.include_router(chat_router.router)  # RAG endpoints at /api/rag/*
+app.include_router(webhooks_router.router, prefix="/api/v1")
 
 
 @app.on_event("startup")
