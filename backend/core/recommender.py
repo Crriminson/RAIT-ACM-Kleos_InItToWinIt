@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from core.matcher import MatchResult
 from models.extraction import ExtractedInvoice
 from models.mismatch import MismatchType
+from core.reason_texts import get_rationale
 
 
 # ---------------------------------------------------------------------------
@@ -40,8 +41,16 @@ class VerdictPayload:
     action: str       # "ACCEPT" | "REJECT" | "HOLD"
     severity: str     # "resolved" | "blocked" | "pending"
     reason_code: str  # MismatchType value, e.g. "MISSING_TRANSACTION"
-    reason_text: str  # Plain English, one sentence
+    reason_text_en: str
+    reason_text_hi: str
+    action_text_en: str
+    action_text_hi: str
+    tts_url_en: str
+    tts_url_hi: str
     itc_impact_inr: float   # positive = claimable, negative = at risk / blocked
+
+    # F11: Permanent vs Recoverable
+    is_recoverable: bool
 
     # Extraction confidence — lets the API surface low-confidence warnings
     confidence: float
@@ -54,9 +63,15 @@ class VerdictPayload:
             "action":          self.action,
             "severity":        self.severity,
             "reason_code":     self.reason_code,
-            "reason_text":     self.reason_text,
+            "reason_text_en":  self.reason_text_en,
+            "reason_text_hi":  self.reason_text_hi,
+            "action_text_en":  self.action_text_en,
+            "action_text_hi":  self.action_text_hi,
+            "tts_url_en":      self.tts_url_en,
+            "tts_url_hi":      self.tts_url_hi,
             "itc_impact_inr":  self.itc_impact_inr,
             "confidence":      round(self.confidence, 4),
+            "is_recoverable":  self.is_recoverable,
         }
 
 
@@ -69,57 +84,20 @@ _ACTION_MAP: dict[MismatchType, str] = {
     MismatchType.HSN_MISMATCH:        "HOLD",
     MismatchType.RATE_MISMATCH:       "HOLD",
     MismatchType.TAX_AMOUNT_DELTA:    "HOLD",
+    MismatchType.POS_MISMATCH:        "HOLD",
+    MismatchType.BLOCKED_CREDIT_17_5: "HOLD",
     MismatchType.CLEAN_MATCH:         "ACCEPT",
 }
 
 _SEVERITY_MAP: dict[MismatchType, str] = {
     MismatchType.MISSING_TRANSACTION: "blocked",
     MismatchType.HSN_MISMATCH:        "blocked",
+    MismatchType.POS_MISMATCH:        "blocked",
+    MismatchType.BLOCKED_CREDIT_17_5: "pending",
     MismatchType.RATE_MISMATCH:       "pending",
     MismatchType.TAX_AMOUNT_DELTA:    "pending",
     MismatchType.CLEAN_MATCH:         "resolved",
 }
-
-def _reason_text(match: MatchResult, invoice: ExtractedInvoice) -> str:
-    """
-    One-sentence English explanation for the trader.
-    Mirrors the reason_en strings in matching-engine.ts.
-    """
-    mt = match.mismatch_type
-    supplier = invoice.supplier_name or invoice.supplier_gstin
-
-    if mt == MismatchType.MISSING_TRANSACTION:
-        return (
-            f"{supplier} has not filed this invoice (#{invoice.invoice_number}) "
-            f"in their GSTR-1, so it does not appear in your GSTR-2B. "
-            f"ITC of ₹{match.itc_at_risk:,.0f} is blocked."
-        )
-    if mt == MismatchType.HSN_MISMATCH:
-        return (
-            f"The HSN code on your invoice from {supplier} does not match "
-            f"what they reported in GSTR-2B. "
-            f"₹{match.itc_at_risk:,.0f} ITC is blocked until corrected."
-        )
-    if mt == MismatchType.RATE_MISMATCH:
-        detail = f" ({match.delta_detail})" if match.delta_detail else ""
-        return (
-            f"Tax rate differs between your invoice and GSTR-2B for {supplier}"
-            f"{detail}. "
-            f"₹{match.itc_at_risk:,.0f} ITC is at risk — hold and request an amendment."
-        )
-    if mt == MismatchType.TAX_AMOUNT_DELTA:
-        detail = f" ({match.delta_detail})" if match.delta_detail else ""
-        return (
-            f"Tax amounts differ by more than 1% between your invoice and "
-            f"GSTR-2B for {supplier}{detail}. "
-            f"₹{match.itc_at_risk:,.0f} ITC is at risk."
-        )
-    # CLEAN_MATCH
-    return (
-        f"Invoice #{invoice.invoice_number} from {supplier} matches GSTR-2B "
-        f"exactly. ITC is claimable."
-    )
-
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -143,7 +121,7 @@ def recommend(match: MatchResult, invoice: ExtractedInvoice) -> VerdictPayload:
     """
     action   = _ACTION_MAP[match.mismatch_type]
     severity = _SEVERITY_MAP[match.mismatch_type]
-    reason   = _reason_text(match, invoice)
+    rationale = get_rationale(match, invoice)
 
     # ITC impact convention:
     #   positive → claimable (ACCEPT)
@@ -154,6 +132,19 @@ def recommend(match: MatchResult, invoice: ExtractedInvoice) -> VerdictPayload:
     else:
         itc_impact = -match.itc_at_risk
 
+    # F11 check: deadline is Nov 30 of the following financial year
+    is_recoverable = True
+    if invoice.invoice_date:
+        try:
+            from datetime import datetime
+            dt = datetime.strptime(invoice.invoice_date, "%Y-%m-%d")
+            fy_end_year = dt.year + 1 if dt.month >= 4 else dt.year
+            deadline = datetime(fy_end_year, 11, 30)
+            if datetime.now() > deadline:
+                is_recoverable = False
+        except ValueError:
+            pass
+
     return VerdictPayload(
         invoice_number=invoice.invoice_number,
         supplier_gstin=invoice.supplier_gstin,
@@ -161,7 +152,13 @@ def recommend(match: MatchResult, invoice: ExtractedInvoice) -> VerdictPayload:
         action=action,
         severity=severity,
         reason_code=match.mismatch_type.value,
-        reason_text=reason,
+        reason_text_en=rationale.reason_en,
+        reason_text_hi=rationale.reason_hi,
+        action_text_en=rationale.action_en,
+        action_text_hi=rationale.action_hi,
+        tts_url_en=rationale.tts_url_en,
+        tts_url_hi=rationale.tts_url_hi,
         itc_impact_inr=itc_impact,
         confidence=invoice.overall_confidence,
+        is_recoverable=is_recoverable,
     )

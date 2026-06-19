@@ -12,6 +12,13 @@ numpy>=2.1.0
 # --- Gemini: AI advisory endpoints + vision-based invoice OCR ---
 google-genai>=1.0.0
 
+# --- RAG pipeline ---
+httpx>=0.27.0
+chromadb>=0.5.0
+
+# --- RAG: Local embeddings (optional, ~80MB model download on first use) ---
+# sentence-transformers>=3.0.0
+
 # --- DB migrations (optional, not needed to run) ---
 alembic>=1.13.1
 

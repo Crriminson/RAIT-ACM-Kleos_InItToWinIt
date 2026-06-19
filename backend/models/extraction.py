@@ -103,8 +103,9 @@ class ExtractedInvoice:
     sgst: float
     igst: float
 
-    # Optional but always attempted
+    # Optional fields (best-effort)
     supplier_name: str = ""
+    place_of_supply: str = ""
     hsn_codes: list[str] = field(default_factory=list)
     line_items: list[LineItem] = field(default_factory=list)
 

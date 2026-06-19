@@ -40,6 +40,9 @@ from models.mismatch import MismatchType
 # Maximum fractional tax-amount delta before flagging TAX_AMOUNT_DELTA
 TAX_DELTA_THRESHOLD: float = 0.01  # 1%
 
+# Section 17(5) blocked HSN prefixes (Motor vehicles, aircraft, vessels, etc.)
+BLOCKED_HSN_PREFIXES: tuple[str, ...] = ("8703", "8802", "8901")
+
 
 # ---------------------------------------------------------------------------
 # Result type
@@ -114,6 +117,41 @@ def match_invoice(
             matched_record=None,
             itc_at_risk=total_itc,
         )
+
+    total_itc = extracted.cgst + extracted.sgst + extracted.igst
+
+    # ── Step 1b: Section 17(5) Blocked Credit check (F13) ────────────────────
+    for hsn in extracted.hsn_codes:
+        if any(hsn.startswith(p) for p in BLOCKED_HSN_PREFIXES):
+            return MatchResult(
+                mismatch_type=MismatchType.BLOCKED_CREDIT_17_5,
+                matched_record=matched,
+                itc_at_risk=total_itc,
+                delta_detail=f"HSN {hsn} flagged as potentially blocked under Section 17(5)",
+            )
+
+    # ── Step 1c: Place of Supply check (F12) ─────────────────────────────────
+    if extracted.place_of_supply and matched.place_of_supply:
+        pos_inv = extracted.place_of_supply.strip().lower()
+        pos_gstr = matched.place_of_supply.strip().lower()
+        inv_code_match = re.search(r'\d{2}', pos_inv)
+        gstr_code_match = re.search(r'\d{2}', pos_gstr)
+        
+        is_mismatch = False
+        if inv_code_match and gstr_code_match:
+            if inv_code_match.group() != gstr_code_match.group():
+                is_mismatch = True
+        elif pos_inv not in pos_gstr and pos_gstr not in pos_inv:
+            # Fallback basic substring check if codes aren't present
+            is_mismatch = True
+            
+        if is_mismatch:
+            return MatchResult(
+                mismatch_type=MismatchType.POS_MISMATCH,
+                matched_record=matched,
+                itc_at_risk=total_itc,
+                delta_detail=f"Invoice POS '{extracted.place_of_supply}' vs GSTR-2B POS '{matched.place_of_supply}'",
+            )
 
     # ── Step 2: HSN set comparison (NOT positional) ───────────────────────────
     # Mirrors: checkHsnMismatch() in matching-engine.ts

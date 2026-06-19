@@ -11,6 +11,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.routes import invoices as invoices_router
 from api.routes import analyze_compat
 from api.routes import ai as ai_router
+from api.routes import reconciliation as reconciliation_router
+from api.routes import verdicts as verdicts_router
+from api.routes import summary as summary_router
+from api.routes import chat as chat_router
 from core import gemini
 from db.session import Base, engine
 
@@ -42,6 +46,10 @@ app.add_middleware(
 app.include_router(invoices_router.router, prefix="/api/v1")
 app.include_router(analyze_compat.router)  # app-compatible JSON endpoint at /api/analyze-invoice
 app.include_router(ai_router.router)       # app-compatible AI endpoints (gst-doubt, ai-advice, ...)
+app.include_router(reconciliation_router.router, prefix="/api/v1")
+app.include_router(verdicts_router.router, prefix="/api/v1")
+app.include_router(summary_router.router, prefix="/api/v1")
+app.include_router(chat_router.router)  # RAG endpoints at /api/rag/*
 
 
 @app.on_event("startup")

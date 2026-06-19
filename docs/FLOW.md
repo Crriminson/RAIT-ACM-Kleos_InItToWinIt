@@ -24,11 +24,20 @@
    - [7.9 Returning User (Month-End Batch) Flow](#79-returning-user-month-end-batch-flow)
    - [7.10 E-Invoice Eligibility Alert Flow](#710-e-invoice-eligibility-alert-flow)
    - [7.11 Regulatory Diagnostic Features (F11–F14)](#711-regulatory-diagnostic-features-f11f14)
+   - [7.12 RAG-Powered GST Knowledge Assistant](#712-rag-powered-gst-knowledge-assistant)
+   - [7.13 App Lock (PIN + Biometric Authentication)](#713-app-lock-pin--biometric-authentication)
+   - [7.14 Export and Reporting Flow](#714-export-and-reporting-flow)
+   - [7.15 AI Advisory and Tax Planning Flow](#715-ai-advisory-and-tax-planning-flow)
+   - [7.16 Invoice Comparison Flow](#716-invoice-comparison-flow)
+   - [7.17 Invoice Detail (Forensic View)](#717-invoice-detail-forensic-view)
+   - [7.18 Session History and Multi-Period Audit Trail](#718-session-history-and-multi-period-audit-trail)
+   - [7.19 Portal 2B Download Guidance](#719-portal-2b-download-guidance)
 8. [Happy Path](#8-happy-path)
 9. [Edge Cases](#9-edge-cases)
 10. [Failure States](#10-failure-states)
 11. [Stretch Flows (Gated at 70% Build Checkpoint)](#11-stretch-flows-gated-at-70-build-checkpoint)
 12. [Cut and Out-of-Scope Flows](#12-cut-and-out-of-scope-flows)
+13. [Appendix B: Backend API Reference](#appendix-b-backend-api-reference)
 
 ---
 
@@ -48,6 +57,7 @@ This is a **flow design document, not an implementation spec**. No code decision
 
 - **Stack (resolves A1 / the blocking native-vs-web question):** Built as an **Expo / React Native app** — it runs natively on a phone (Expo Go or a dev build) **and** has a **web build** used for the laptop/judge demo. Decision: *native-first, with a web build for demo safety.*
 - **OCR engine (resolves A10):** **PaddleOCR (offline, on the backend) as primary**, with a **Gemini vision-LLM fallback** when the offline read is low-confidence or unavailable. The pipeline is input-source-agnostic (camera, upload, WhatsApp all share it).
+- **LLM architecture — Modular provider system:** All LLM and embedding access is behind swappable abstract interfaces (`BaseLLMProvider`, `BaseEmbedder`). Four LLM providers implemented: **Gemini** (current default), **Groq** (fastest inference, ~10x speed), **Ollama** (fully local, zero API cost), **OpenAI-compatible** (OpenRouter, Together, etc.). Provider swap is a single env var change (`RAG_LLM_PROVIDER`), no code changes. Embedding defaults to ChromaDB's built-in all-MiniLM-L6-v2 (offline, no API key needed).
 - **Multilingual — Bhashini CONFIRMED:** Bhashini is the multilingual layer. English content is locked first, then Bhashini translates it (with a manual GST-term verification pass), and Bhashini TTS powers read-aloud. Hindi + English are the rigorously tested languages; one regional language remains a stretch demo moment.
 
 ### Features now committed (previously council-rec / stretch)
@@ -59,14 +69,27 @@ This is a **flow design document, not an implementation spec**. No code decision
 | **F13** | Section 17(5) Blocked-Credit Detector (*flag-for-review, never assert*) | §7.4, §7.6, §7.11 |
 | **F14** | Supplier-Fix Message Generator (*drafts only, never auto-sends*) | §7.5, §7.6, §7.11 |
 | — | **Editable Recognition Review** (trader corrects OCR fields before matching) | §7.4 |
-| — | **🔊 Read-aloud (Bhashini TTS)** on every verdict (low-literacy accessibility — distinct from the cut Voice/IVR assistant) | §7.6 |
+| — | **🔊 Read-aloud (Expo Speech offline TTS)** on every verdict (low-literacy accessibility — distinct from the cut Voice/IVR assistant). Uses device-native TTS with Hindi/English voice discovery and graceful fallback — *not* Bhashini TTS API. | §7.6 |
 | — | **Section 16(4) ITC-claim deadline** surfaced per invoice | §7.6 |
 | — | **GSTR-2A supplier non-filing early warning** (now committed, was stretch) | §11.1 |
 | — | **E-invoice eligibility alert + guide** (turnover-based, informational only) | §7.10 |
+| — | **RAG knowledge assistant** (GST knowledge ingestion + context-grounded Q&A) | §7.12 |
+| — | **App Lock (PIN + Biometric)** — privacy/security layer protecting sensitive GST data | §7.13 |
+| — | **CSV / PDF Export** — period-aware export of diagnosis results with platform-specific sharing | §7.14 |
+| — | **AI Advisory & Tax Planning** — Gemini-powered bilingual advisories and tax-saving strategies with offline fallbacks | §7.15 |
+| — | **Invoice Comparison** — side-by-side discrepancy detection between two invoices | §7.16 |
+| — | **Invoice Detail (Forensic View)** — per-invoice deep-dive with line-item breakdown and linked GSTR-2B record | §7.17 |
+| — | **Session History (Multi-Period Audit Trail)** — persistent multi-month history with period grouping and severity indicators | §7.18 |
 
 ### Already built
 
 - **WhatsApp bot stub** (§11.2) — one invoice routed through the real OCR → match → verdict pipeline and answered in a WhatsApp-style chat, disclosed as a channel prototype. The §11 build-checkpoint gate has been **passed**, so this is now a built feature, not a gated stretch.
+- **RAG + Modular LLM pipeline** (§7.12) — Retrieval-Augmented Generation system with swappable LLM providers (Gemini, Groq, Ollama, OpenAI-compatible) and ChromaDB vector store. Ingests GST knowledge → retrieves relevant context → generates grounded answers. Modular architecture allows provider swap via a single env var (`RAG_LLM_PROVIDER`). ChromaDB default embedder (all-MiniLM-L6-v2) runs offline with no API key required for embeddings.
+- **App Lock** (§7.13) — PIN-based + biometric authentication protecting sensitive GST data at app entry.
+- **CSV / PDF Export** (§7.14) — diagnosis results exportable as CSV or rendered to PDF, with period-aware filenames and platform-specific sharing (web download vs native share sheet).
+- **AI Advisory + Tax Planning** (§7.15) — Gemini-powered bilingual advisory generation, 3-strategy tax planning, and invoice comparison — all with deterministic offline fallbacks.
+- **Session History** (§7.18) — multi-period audit trail with collapsible period groups, severity indicators, and persistent AsyncStorage backing.
+- **Offline TTS** (§7.6) — Read-aloud implemented via Expo Speech (device-native), not Bhashini TTS API. Supports Hindi (hi-IN) and English (en-IN) with voice enumeration and graceful fallback.
 
 ---
 
@@ -116,11 +139,12 @@ The following assumptions were made where the ideation document leaves items ope
 The trader app moves through the following states in sequence each month. A trader can re-enter at any state if they return mid-session.
 
 ```
-ONBOARDING → IMPORT → CAPTURE → PROCESSING → RECONCILIATION → VERDICT → SUMMARY → ACTION
+[LOCK] → ONBOARDING → IMPORT → CAPTURE → PROCESSING → RECONCILIATION → VERDICT → SUMMARY → ACTION
 ```
 
 | State | Description | Entry Condition |
 |-------|-------------|-----------------|
+| **LOCK** | PIN / biometric authentication gate (if enabled) | Every app launch (if lock is set up) |
 | **ONBOARDING** | First-time setup: language selection, GSTIN entry, brief product orientation | First app launch only |
 | **IMPORT** | Trader imports (or app loads) the GSTR-2B data for the current month | Start of each monthly cycle (after ~14th of month) |
 | **CAPTURE** | Trader photographs or uploads purchase invoices | After import; can be done incrementally throughout the month |
@@ -129,6 +153,15 @@ ONBOARDING → IMPORT → CAPTURE → PROCESSING → RECONCILIATION → VERDICT 
 | **VERDICT** | Per-invoice recommendation screen: Accept / Reject / Hold with plain-language reason and ₹ ITC impact | After reconciliation; one invoice at a time |
 | **SUMMARY** | Monthly aggregate view: all invoices, total ITC at stake, action breakdown | After all verdict screens are reviewed, or accessible at any time |
 | **ACTION** | Trader is guided via mini-walkthrough to take recommended actions manually on the GST IMS portal | After summary review; trader-initiated |
+
+**Parallel states (accessible from any point in the flow):**
+
+| State | Description | Entry Condition |
+|-------|-------------|-----------------|
+| **EXPORT** | CSV/PDF export of diagnosis results | From Summary or Diagnosis screen |
+| **AI_INSIGHTS** | AI-generated advisory, tax planning, invoice comparison | From Home dashboard or post-diagnosis |
+| **HISTORY** | Multi-period session history and audit trail | From Profile tab, any time |
+| **DETAIL** | Forensic view of a single invoice | From any invoice list or verdict |
 
 ---
 
@@ -562,13 +595,16 @@ Reconciliation Engine runs (backend, no trader input needed)
   - *"ITC claim ki last date: [date] (Section 16(4))"*
   - Calculated from the invoice date + the statutory deadline (earlier of the annual return or GSTR-3B for September of the following year)
 - Explicit advisory notice: *"Yeh sirf recommendation hai — aapko yeh action IMS portal par khud lena hoga."* / *"This is a recommendation. You must take this action yourself on the IMS portal."*
-- **🔊 Read-aloud button (Bhashini TTS):** Every verdict card has a speaker icon. Tapping it reads the recommendation, reason, and ₹ impact aloud in the trader's selected language via Bhashini TTS — a core low-literacy accessibility feature (distinct from the CUT Voice/IVR assistant).
+- **🔊 Read-aloud button (Expo Speech — offline TTS):** Every verdict card has a speaker icon. Tapping it reads the recommendation, reason, and ₹ impact aloud in the trader's selected language — a core low-literacy accessibility feature (distinct from the CUT Voice/IVR assistant).
+  - **Implementation:** Uses `expo-speech` (device-native TTS), not Bhashini TTS API. Enumerates available system voices and selects the best match for the trader's language (hi-IN at 0.92 rate, en-IN at 0.96 rate).
+  - **Fallback:** If Hindi voice is unavailable on the device (e.g., some Xiaomi/MIUI devices), falls back to English with a non-intrusive notification. No network dependency.
+  - **Source:** `app/src/utils/speech.ts`
 
 ```
 Verdict Screen — Invoice [N] of [Total]
     │
     ▼
-Trader reads recommendation (or taps 🔊 for Bhashini TTS read-aloud)
+Trader reads recommendation (or taps 🔊 for offline TTS read-aloud)
     │
     ├── Trader taps "Samajh nahi aaya" / "I don't understand"
     │       → Show slightly expanded plain-language explanation
@@ -606,7 +642,7 @@ All invoices reviewed
 > - **F11 tag** — trader immediately sees if ITC loss is permanent (act now) or recoverable (supplier can fix). Drives urgency without adding jargon.
 > - **F13 caution** — Section 17(5) blocked-credit flag. Advisory only, never asserts. Tells the trader to verify with their CA.
 > - **F14 button** — one-tap supplier-fix message forwarding. Reduces friction from "you should contact your supplier" to actually doing it.
-> - **🔊 Bhashini TTS** — core accessibility for low-literacy traders. Reads the verdict aloud.
+> - **🔊 Offline TTS (Expo Speech)** — core accessibility for low-literacy traders. Reads the verdict aloud. Uses device-native voices, not Bhashini TTS API.
 > - **Section 16(4) deadline** — tells the trader *when* they must claim ITC, not just *whether* they should.
 
 ---
@@ -620,7 +656,7 @@ Monthly Summary Screen
     │
     ▼
 Header
-    "📣 [Month Year] — GST Summary"  (🔊 tap to hear via Bhashini TTS)
+    "📣 [Month Year] — GST Summary"  (🔊 tap to hear via offline TTS)
     "Kul processed invoices: N" / "Total invoices processed: N"
     "Kul ITC khatre mein: ₹X" / "Total ITC at risk: ₹X"
     │
@@ -868,6 +904,420 @@ This ensures the trader retains full control over supplier communication. Auto-s
 
 ---
 
+### 7.12 RAG-Powered GST Knowledge Assistant
+
+**Trigger:** Trader taps "Ask a GST doubt" or the app needs context-grounded answers about GST rules, deadlines, or compliance procedures.
+
+**What it does:** Uses Retrieval-Augmented Generation (RAG) to answer GST questions grounded in ingested knowledge — not hallucinated from the LLM's training data. The system ingests curated GST knowledge (rules, deadlines, IMS procedures, Section 16(4) rules, etc.) into a ChromaDB vector store, retrieves the most relevant chunks for each question, and generates a concise answer using the active LLM provider.
+
+**Architecture:**
+
+```
+backend/rag/
+├── providers/
+│   ├── base.py              ← Abstract BaseLLMProvider + BaseEmbedder
+│   ├── gemini.py             ← Gemini (default, uses existing API key)
+│   ├── groq_provider.py      ← Groq (llama-3.1-8b, fastest inference)
+│   ├── openai_compat.py      ← OpenAI-compatible (OpenRouter, Together)
+│   └── ollama.py             ← Local LLM via Ollama (zero API cost)
+├── embedders/
+│   ├── chroma_default.py     ← ChromaDB built-in all-MiniLM-L6-v2 (default)
+│   ├── gemini_embed.py       ← Gemini embedding API (opt-in)
+│   └── local_embed.py        ← sentence-transformers (opt-in, offline)
+├── vectorstore.py            ← ChromaDB wrapper (persistent, cosine similarity)
+├── ingestion.py              ← Sentence-aware document chunking with overlap
+├── pipeline.py               ← Orchestrates: embed query → retrieve → generate
+└── config.py                 ← Single-file provider swap (env var driven)
+```
+
+**Provider swap (zero code changes):**
+
+| Env var | Options | Default |
+|---|---|---|
+| `RAG_LLM_PROVIDER` | `gemini`, `groq`, `ollama`, `openai` | `gemini` |
+| `RAG_EMBEDDER_PROVIDER` | `chroma`, `gemini`, `local` | `chroma` |
+
+**API endpoints:**
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/api/rag/query` | POST | Ask a question — retrieves context + generates answer |
+| `/api/rag/ingest` | POST | Ingest a single text chunk with metadata |
+| `/api/rag/ingest-document` | POST | Ingest a full document (auto-chunked with overlap) |
+| `/api/rag/health` | GET | LLM provider health + docs indexed count |
+
+**Frontend hook:** `app/src/hooks/useRAG.ts` — wraps `/api/rag/query` with loading/error state.
+
+```
+Trader asks a GST doubt (or app generates context-grounded content)
+    │
+    ▼
+Question embedded via active embedder (default: all-MiniLM-L6-v2, offline)
+    │
+    ▼
+ChromaDB retrieves top-K relevant knowledge chunks (cosine similarity)
+    │
+    ▼
+Retrieved context + question sent to active LLM (default: Gemini)
+    System prompt scopes the LLM to answer ONLY from provided context
+    │
+    ├── Context found → grounded answer in trader's language
+    │       Response includes: answer, sources, model used, tokens, chunks retrieved
+    │
+    └── No context found → "I don't have enough information about that."
+            (LLM prevented from hallucinating by system prompt constraint)
+```
+
+**Demo resilience:** If the primary LLM (Gemini) API key expires mid-demo, the team can swap to Groq (free tier, 14,400 req/day) or Ollama (fully local on the laptop) by changing one env var and restarting the backend — no code changes needed. This is the explicit design goal of the modular provider architecture.
+
+> **Design note:** This is infrastructure that powers multiple features — the "Ask a GST doubt" endpoint, future advisory generation, and any feature that needs context-grounded LLM responses. The RAG pipeline ensures answers are traceable to ingested knowledge, not LLM training data.
+
+---
+
+### 7.13 App Lock (PIN + Biometric Authentication)
+
+> **Status: BUILT** — see §1A
+
+**Trigger:** App launch (every time, if lock is enabled). First-time users are prompted to set up a lock during or after onboarding.
+
+**What it does:** Protects sensitive GST and financial data behind a PIN and/or biometric gate. Since the app stores GSTINs, ITC amounts, supplier relationships, and invoice images, an unlocked app on a shared or lost device exposes the trader's entire financial profile.
+
+```
+App opens
+    │
+    ▼
+Lock enabled?
+    │
+    ├── NO → proceed to Home / Dashboard directly
+    │
+    └── YES
+            │
+            ▼
+        Lock Screen
+            ┌──────────────────────────────────────┐
+            │  🔒 Enter your 4-digit PIN            │
+            │                                        │
+            │  [  ] [  ] [  ] [  ]                  │
+            │                                        │
+            │  [Biometric icon — if available]       │
+            │  "Use fingerprint / face to unlock"    │
+            └──────────────────────────────────────┘
+            │
+            ├── PIN correct → unlock → proceed to Home
+            │
+            ├── Biometric match → unlock → proceed to Home
+            │
+            └── Wrong PIN / biometric fail
+                    → "Galat PIN — dobara try karein"
+                    → Retry (no lockout for MVP — hackathon scope)
+```
+
+**Setup flow (accessible from Profile):**
+
+```
+Profile → "App Lock Setup"
+    │
+    ▼
+PIN Setup Screen
+    - "4-digit PIN set karein" / "Set a 4-digit PIN"
+    - Enter PIN → confirm PIN (must match)
+    │
+    ▼
+Biometric Enrollment (if device supports it)
+    - Check biometric availability (fingerprint/face)
+    ├── Available → "Fingerprint / Face ID bhi use karein?" → enable/skip
+    └── Not available → skip silently (PIN-only mode)
+    │
+    ▼
+Lock enabled ✅
+    - Toggle to enable/disable lock accessible from Profile
+    - Reset PIN accessible from Profile
+```
+
+**Source:** `app/src/screens/LockScreen.tsx`, `app/src/screens/LockSetupScreen.tsx`, `app/src/data/contexts/lock-context.tsx`
+
+---
+
+### 7.14 Export and Reporting Flow
+
+> **Status: BUILT** — see §1A
+
+**Trigger:** Trader taps "Export" or "Share" from the Monthly Summary (§7.7) or Diagnosis screen.
+
+**What it does:** Exports the full diagnosis results as a downloadable CSV or a formatted PDF. The trader can share the export via WhatsApp, email, or any system share target. Exports are period-aware — filenames include the month/year for easy filing.
+
+```
+Monthly Summary or Diagnosis Screen
+    │
+    ▼
+Trader taps "📤 Export / Share"
+    │
+    ▼
+Export Format Selection
+    ┌──────────────────┬──────────────────┐
+    │   📊 CSV          │   📄 PDF         │
+    └──────────────────┴──────────────────┘
+    │
+    ├── CSV path
+    │       Generated file: "GST-Diagnosis-June2026.csv"
+    │       Headers: Supplier, Invoice No, Type, Severity,
+    │                Amount, Reason, Recommended Action
+    │       One row per flagged issue
+    │       │
+    │       ├── [Web] → triggers browser file download
+    │       └── [Native] → opens system share sheet
+    │
+    └── PDF path
+            Rendered via expo-print (native) or HTML print dialog (web)
+            Contains: header with period + GSTIN, full verdict list,
+                      ITC summary, action breakdown
+            │
+            ├── [Web] → opens browser print/save-as-PDF dialog
+            └── [Native] → opens system share sheet
+    │
+    ▼
+WhatsApp Quick-Share (optional, one-tap)
+    - Pre-fills a WhatsApp message with the summary text
+    - Uses WhatsApp deep link (wa.me) with URL-encoded summary
+    - Attached file (CSV/PDF) shared via system share sheet
+```
+
+**Design note:** The export is the trader's record — they may share it with their CA for review, or keep it for their own audit trail. The CSV format is intentionally simple (flat, no nested data) so it opens cleanly in any spreadsheet app on a phone.
+
+**Source:** `app/src/utils/share.ts`
+
+---
+
+### 7.15 AI Advisory and Tax Planning Flow
+
+> **Status: BUILT** — see §1A
+
+**Trigger:** Trader taps "AI Insights" or "Tax Planning" from the home dashboard or post-diagnosis summary.
+
+**What it does:** Uses Gemini (with deterministic offline fallbacks) to generate three types of AI-powered outputs beyond the core verdict screen:
+
+1. **Consolidated Advisory** — combines reconciliation mismatches and physical invoice data into a bilingual (Hindi + English) advisory paragraph.
+2. **Tax Planning Strategies** — generates 3 concrete, actionable tax-saving strategies tailored to the trader's invoice profile.
+3. **Invoice Comparison** — side-by-side comparison of two invoices with a discrepancy matrix (covered separately in §7.16).
+
+```
+AI Insights Screen
+    │
+    ▼
+Consolidated Advisory
+    "Aapke June 2026 ke invoices ka summary:"
+    - Bilingual (Hindi + English) advisory paragraph
+    - Highlights: top mismatches, total ITC at risk,
+      most urgent actions
+    - Method indicator: "gemini" or "fallback"
+    │
+    ▼
+Tax Planning Strategies (3 cards)
+    ┌─────────────────────────────────────┐
+    │  Strategy 1: [Title]                │
+    │  [Subtitle — one-line hook]         │
+    │  [Description — 2-3 sentences,      │
+    │   actionable, Hindi + English]      │
+    └─────────────────────────────────────┘
+    (× 3 strategies)
+    │
+    ▼
+Each strategy is specific to the trader's data:
+    e.g., "Contact 3 suppliers who haven't filed — recover ₹X ITC"
+    e.g., "Claim ITC before Section 16(4) deadline on 5 invoices"
+```
+
+**Backend API endpoints:**
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/api/ai-advice` | POST | Combined English + Hindi advisory from reconciliation data |
+| `/api/tax-planning` | POST | 3 tax strategies with titles, subtitles, descriptions |
+
+**Offline fallback:** All endpoints have deterministic fallback logic — if Gemini is unreachable or the API key is invalid, the response includes pre-built template advice based on the reconciliation data (mismatch counts, ITC amounts). The `method` field in the response indicates `"gemini"` or `"fallback"`.
+
+**Source:** `app/src/screens/AiInsightsScreen.tsx`, `backend/api/routes/ai.py`
+
+---
+
+### 7.16 Invoice Comparison Flow
+
+> **Status: BUILT** — see §1A
+
+**Trigger:** Trader selects two invoices for comparison, or taps "Compare" from the AI Insights screen.
+
+**What it does:** Generates a side-by-side comparison matrix between two invoices, highlighting discrepancies field by field. Useful when the trader suspects two invoices are duplicates, or wants to understand why one was flagged and the other was not.
+
+```
+Compare Screen
+    │
+    ▼
+Trader selects Invoice A and Invoice B
+    │
+    ▼
+Comparison Matrix (table view)
+    ┌──────────────┬──────────────┬──────────────┬──────────┐
+    │   Aspect     │  Invoice A   │  Invoice B   │  Status  │
+    ├──────────────┼──────────────┼──────────────┼──────────┤
+    │ Supplier     │ 29XXXXX      │ 29XXXXX      │ ✅ Match │
+    │ Invoice #    │ INV-2024     │ INV-2024     │ ⚠️ Same! │
+    │ CGST         │ ₹480         │ ₹380         │ ❌ Diff  │
+    │ HSN Code     │ 2106         │ 2105         │ ❌ Diff  │
+    │ Total        │ ₹5,480       │ ₹5,380       │ ❌ Diff  │
+    └──────────────┴──────────────┴──────────────┴──────────┘
+    │
+    ▼
+Audit Observations
+    - "Same invoice number from same supplier — possible duplicate"
+    - "CGST difference of ₹100 — verify with supplier"
+    │
+    ▼
+Recommendation
+    - Per-discrepancy action suggestion
+```
+
+**Backend API endpoint:**
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/api/compare-invoices` | POST | Comparison matrix (aspect, valueA, valueB, status) |
+
+**Source:** `app/src/screens/CompareScreen.tsx`, `backend/api/routes/ai.py`
+
+---
+
+### 7.17 Invoice Detail (Forensic View)
+
+> **Status: BUILT**
+
+**Trigger:** Trader taps any invoice row in the Monthly Summary (§7.7), Session History (§7.18), or Diagnosis results.
+
+**What it does:** Shows the complete extracted data for a single invoice in a read-only forensic view — every field the OCR extracted, the matched GSTR-2B record (if any), the diagnostic verdict, and the original captured image.
+
+```
+Invoice Detail Screen
+    │
+    ▼
+Header
+    [Supplier Name] — [Supplier GSTIN]
+    Invoice #: [INV-XXXX]   Date: [DD/MM/YYYY]
+    Severity badge: 🔴 / 🟡 / 🟢
+    │
+    ▼
+Line-Item Breakdown (if available)
+    ┌──────────┬──────┬──────┬──────────┬──────────┐
+    │  HSN     │  Qty │ Unit │ Taxable  │ Tax      │
+    ├──────────┼──────┼──────┼──────────┼──────────┤
+    │  2106    │  50  │  kg  │ ₹5,000   │ ₹900     │
+    │  ...     │      │      │          │          │
+    └──────────┴──────┴──────┴──────────┴──────────┘
+    │
+    ▼
+Tax Split
+    CGST: ₹X  |  SGST: ₹Y  |  IGST: ₹Z
+    Total Taxable: ₹A  |  Total ITC: ₹B
+    │
+    ▼
+Diagnostic Verdict
+    [ACCEPT / REJECT / HOLD] — [one-line reason]
+    F11 tag: 🔴 Permanent / 🟡 Recoverable (if applicable)
+    F13 flag: ⚠️ Section 17(5) caution (if applicable)
+    │
+    ▼
+Linked GSTR-2B Record (if matched)
+    Shows the corresponding GSTR-2B fields for comparison
+    Mismatched fields highlighted
+    │
+    ▼
+Original Image (captured / uploaded)
+    Tappable to zoom
+    │
+    ▼
+Actions
+    [📤 Share] [🔊 Read aloud] [❌ I disagree]
+```
+
+**Source:** `app/src/screens/InvoiceDetailScreen.tsx`
+
+---
+
+### 7.18 Session History and Multi-Period Audit Trail
+
+> **Status: BUILT** — see §1A
+
+**Trigger:** Trader taps "History" from the Profile tab or bottom navigation.
+
+**What it does:** Shows a persistent, multi-period history of all diagnosis sessions. Each period (e.g., "May 2026", "June 2026") is a collapsible group containing all invoices processed in that period, with aggregate stats and severity indicators.
+
+```
+History Screen
+    │
+    ▼
+Period Groups (collapsible, most recent first)
+    ┌──────────────────────────────────────────────┐
+    │  ▼ June 2026                                  │
+    │    142 invoices | 8 issues | ₹12,400 blocked │
+    │    Processed: 19 Jun 2026, 3:45 PM           │
+    │    ┌────────────────────────────────────────┐ │
+    │    │ INV-2024 | 29XXXXX | 🔴 REJECT | ₹2,400│ │
+    │    │ INV-2031 | 27XXXXX | 🟡 HOLD   | ₹800  │ │
+    │    │ ...                                    │ │
+    │    └────────────────────────────────────────┘ │
+    ├──────────────────────────────────────────────┤
+    │  ► May 2026 (collapsed)                       │
+    │    138 invoices | 5 issues | ₹8,200 blocked  │
+    ├──────────────────────────────────────────────┤
+    │  ► April 2026 (collapsed)                     │
+    │    125 invoices | 3 issues | ₹4,600 blocked  │
+    └──────────────────────────────────────────────┘
+    │
+    ▼
+Tap any invoice row → opens Invoice Detail (§7.17)
+Tap any period header → expand/collapse
+```
+
+**Persistence:** Session data is stored in AsyncStorage under `@kleos/sessions`. Each session records: period string (derived from invoice dates), invoice count, issue count, total ITC blocked, timestamp, and per-invoice detail (supplier, invoice #, severity, amount, reason).
+
+**Design note:** This is the trader's audit trail — it answers "what did the app tell me last month?" and "have I acted on all the flagged invoices?" The read-only nature ensures past recommendations cannot be silently altered.
+
+**Source:** `app/src/screens/HistoryScreen.tsx`, `app/src/data/contexts/session-context.tsx`
+
+---
+
+### 7.19 Portal 2B Download Guidance
+
+> **Status: BUILT**
+
+**Trigger:** Trader taps "How to download GSTR-2B" from the GSTR-2B Import screen (§7.2) or from the Help section.
+
+**What it does:** A dedicated step-by-step walkthrough screen showing the trader exactly how to navigate the GST portal and download their GSTR-2B file. Similar in style to the IMS Action Walkthrough (§7.8) but focused on the data-download step.
+
+```
+Portal 2B Guidance Screen
+    │
+    ▼
+Step-by-step instructions (annotated)
+    Step 1: "gst.gov.in par jayein aur login karein"
+            ("Go to gst.gov.in and log in")
+    Step 2: "Services → Returns → GSTR-2B"
+    Step 3: "Financial Year aur Month select karein"
+            ("Select the Financial Year and Month")
+    Step 4: "Download karein — CSV ya Excel format"
+            ("Download in CSV or Excel format")
+    Step 5: "Iss app mein upload karein"
+            ("Upload it in this app")
+    │
+    ▼
+Link to official portal: gst.gov.in
+    │
+    ▼
+Done → returns to GSTR-2B Import screen
+```
+
+**Source:** `app/src/screens/Portal2BScreen.tsx`
+
+---
+
 ## 8. Happy Path
 
 The complete, no-errors run-through of the product for a single monthly cycle:
@@ -992,6 +1442,18 @@ The complete, no-errors run-through of the product for a single monthly cycle:
 
 ---
 
+### EC-14: Hindi TTS voice unavailable on device
+**Scenario:** Trader taps 🔊 read-aloud but the device (e.g., some Xiaomi/MIUI phones) does not have Hindi voice data installed.
+**Handling:** Expo Speech enumerates available voices. If no hi-IN voice is found, falls back to en-IN and shows a non-intrusive toast: *"Hindi voice available nahi hai — English mein sun rahe hain."* No crash, no blocked flow.
+
+---
+
+### EC-15: Export with no diagnosis data
+**Scenario:** Trader taps Export before any invoices have been processed or any reconciliation has run.
+**Handling:** Disable export buttons or show: *"Pehle invoices process karein — abhi export ke liye kuch nahi hai."* / *"Process invoices first — nothing to export yet."*
+
+---
+
 ## 10. Failure States
 
 ### FS-01: GSTR-2B Load / Upload Failure
@@ -1038,6 +1500,20 @@ The complete, no-errors run-through of the product for a single monthly cycle:
 - Pre-decide which team member owns the go/no-go call on demo test cases.
 
 *(Flagged as a required pre-decision in Thread 010.)*
+
+---
+
+### FS-07: AI Advisory / Tax Planning Generation Failure
+**Trigger:** Gemini API is unreachable, rate-limited, or returns an error when generating advisory content or tax planning strategies.
+**Message:** Advisory still renders — using **deterministic offline fallback** logic based on reconciliation data (mismatch counts, ITC amounts, action breakdown).
+**Handling:** Response includes `method: "fallback"` instead of `method: "gemini"`. The fallback generates template-based advice from the structured reconciliation results (e.g., "You have N invoices to reject — contact suppliers for ₹X recoverable ITC"). No blank screen. The trader sees useful advice either way.
+
+---
+
+### FS-08: Biometric Authentication Failure
+**Trigger:** Biometric sensor fails to read, returns an error, or is disabled by the OS (e.g., after too many failed attempts at the system level).
+**Message:** *"Fingerprint se unlock nahi ho paya — PIN se try karein."* / *"Fingerprint unlock failed — try your PIN."*
+**Recovery:** Falls back to PIN entry. Biometric failure never blocks app access — PIN is always available as the primary unlock method.
 
 ---
 
@@ -1092,6 +1568,8 @@ Trader notes which suppliers to follow up with manually
 **~~Gate condition~~:** ~~Core flow must be fully working and tested on multiple invoices before this is attempted. If gate is not passed → roadmap slide only.~~ **Gate passed.** Core flow is working. This stub is built and routes through the real OCR → match → verdict pipeline.
 
 **Disclosure requirement:** Must be framed explicitly in the demo as *"a working prototype of the WhatsApp ingestion channel"* — not implied to be a full WhatsApp Business API deployment. If probed by judges, be transparent about scope.
+
+> **How it's actually built (build-phase note):** The stub is an **in-app WhatsApp-style chat screen** (reachable from Profile → "WhatsApp bot · Prototype"), *not* a live WhatsApp Business API integration. The trader picks/sends any invoice in a WhatsApp-styled chat; it is routed through the **real** backend OCR → the **real** `runDiagnosis` matching engine → and answered as a verdict chat bubble (with 🔊 read-aloud). A persistent on-screen banner states *"Prototype — not a live WhatsApp Business API."* This is the honest, demo-safe realisation of the channel concept; a real WhatsApp Business API webhook is the production roadmap path. The diagram below shows the *conceptual* ingestion flow the stub simulates.
 
 ```
 [Demo: one hardcoded test contact sends invoice image to bot number]
@@ -1151,11 +1629,64 @@ The following flows were considered and explicitly cut during ideation. They are
 | 🟡 Open | Hands-on familiarity with live IMS portal screens — required to build accurate walkthrough steps | Still open | Real-world research task |
 | ~~🟡 Open~~ | ~~Who on the team owns monitoring the 70% build checkpoint~~ | ✅ **RESOLVED** — checkpoint passed | — |
 | 🟡 Open | Monetisation / pricing narrative for the landing page | Still open | Team |
-| 🟡 **New** | Bhashini API integration — key management, latency testing, GST-term verification pass for Hindi translations | Open | Backend + content |
+| 🟡 **New** | Bhashini API integration — key management, latency testing, GST-term verification pass for Hindi translations. **Note:** TTS is handled by Expo Speech (offline, device-native) — Bhashini scope is now limited to *translation* and *STT*, not TTS. | Open | Backend + content |
 | 🟡 **New** | F11 amendment-window logic — exact date thresholds for Permanent vs Recoverable classification need CA review | Open | Domain / CA |
 | 🟡 **New** | F13 keyword/HSN list for Section 17(5) blocked categories — needs domain validation | Open | Domain / CA |
 | 🟡 **New** | F14 supplier-fix message templates — tone and content need review ("too aggressive" risk) | Open | Content / UX |
 | 🟡 **New** | Section 16(4) deadline calculation logic — edge cases around annual return vs September GSTR-3B | Open | Domain / CA |
+| ✅ **Built** | RAG + modular LLM pipeline — swappable providers (Gemini/Groq/Ollama/OpenAI), ChromaDB vector store, ingestion + query endpoints, frontend hook | **DONE** — verified end-to-end (ingest → query → grounded Hindi answer) | — |
+| ✅ **Built** | App Lock (PIN + Biometric) — privacy/security gate protecting sensitive GST data. See §7.13. | **DONE** | — |
+| ✅ **Built** | CSV / PDF Export — period-aware export with platform-specific sharing (web download vs native share sheet). See §7.14. | **DONE** | — |
+| ✅ **Built** | AI Advisory + Tax Planning — Gemini-powered bilingual advisories and 3-strategy tax planning with offline fallbacks. See §7.15. | **DONE** | — |
+| ✅ **Built** | Invoice Comparison — side-by-side discrepancy matrix between two invoices. See §7.16. | **DONE** | — |
+| ✅ **Built** | Invoice Detail (Forensic View) — per-invoice deep-dive with line-item breakdown. See §7.17. | **DONE** | — |
+| ✅ **Built** | Session History (Multi-Period Audit Trail) — persistent multi-month history with period grouping. See §7.18. | **DONE** | — |
+| ✅ **Built** | Offline TTS (Expo Speech) — device-native read-aloud with Hindi/English voice discovery and graceful fallback. Replaces planned Bhashini TTS for the read-aloud feature. | **DONE** | — |
+| ✅ **Built** | Portal 2B Download Guidance — step-by-step walkthrough for downloading GSTR-2B from GST portal. See §7.19. | **DONE** | — |
+| ✅ **Built** | In-app i18n system — bilingual UI (Hindi + English) via hardcoded string keys with AsyncStorage-persisted language preference. Separate from Bhashini translation layer. | **DONE** | — |
+
+---
+
+## Appendix B: Backend API Reference
+
+> Consolidated reference of all backend API endpoints. Individual endpoints are also documented inline at their respective flow sections.
+
+### Core Pipeline Endpoints
+
+| Endpoint | Method | Purpose | Flow Section |
+|---|---|---|---|
+| `/api/v1/invoices/upload` | POST | Upload invoice image for OCR processing | §7.3, §7.4 |
+| `/api/v1/reconciliation/run` | POST | Trigger batch reconciliation (idempotent — replaces existing verdicts) | §7.5 |
+| `/api/v1/reconciliation/status` | GET | Reconciliation status: total invoices, verdicts created, GSTR-2B count, last run timestamp | §7.5 |
+| `/api/v1/verdicts` | GET | List all verdicts sorted by ₹ ITC impact (highest first) | §7.6 |
+| `/api/v1/verdicts/{verdict_id}` | GET | Single verdict detail with reason, action, ITC impact | §7.6, §7.17 |
+| `/api/v1/summary` | GET | Monthly aggregate: counts per action, ITC safe/at-risk/pending, period string | §7.7 |
+
+### AI & Diagnostic Endpoints
+
+| Endpoint | Method | Purpose | Flow Section |
+|---|---|---|---|
+| `/api/ai-advice` | POST | Consolidated bilingual (Hindi + English) advisory from reconciliation data | §7.15 |
+| `/api/tax-planning` | POST | 3 concrete tax-saving strategies with titles, subtitles, descriptions | §7.15 |
+| `/api/compare-invoices` | POST | Side-by-side comparison matrix (aspect, valueA, valueB, status) | §7.16 |
+| `/api/pos-mismatch-batch` | POST | Batch Place-of-Supply mismatch analysis with state code mapping (F12) | §7.11 (F12) |
+| `/api/blocked-credit` | POST | Section 17(5) blocked-credit detection with per-category logic (F13) | §7.11 (F13) |
+| `/api/einvoice-alert` | POST | E-invoice eligibility check against turnover thresholds | §7.10 |
+
+### RAG Knowledge Assistant Endpoints
+
+| Endpoint | Method | Purpose | Flow Section |
+|---|---|---|---|
+| `/api/rag/query` | POST | Ask a question — retrieves context + generates grounded answer | §7.12 |
+| `/api/rag/ingest` | POST | Ingest a single text chunk with metadata | §7.12 |
+| `/api/rag/ingest-document` | POST | Ingest a full document (auto-chunked with sentence-aware overlap) | §7.12 |
+| `/api/rag/health` | GET | LLM provider health check + indexed document count | §7.12 |
+
+### Infrastructure Endpoints
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/api/health` | GET | Backend health check (DB connection, Gemini API key presence) |
 
 ---
 

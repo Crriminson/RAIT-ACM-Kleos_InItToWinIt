@@ -41,3 +41,13 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# IDE
+.idea/
+
+# RAG vector store (regenerable from ingestion)
+backend/chroma_db/
+
+# scratch / throwaway scripts
+backend/scratch_test.py
+backend/test_einvoice.py

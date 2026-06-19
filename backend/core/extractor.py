@@ -67,7 +67,7 @@ MAX_RIGHTWARD_SEARCH: float = 0.65
 # ---------------------------------------------------------------------------
 
 _GSTIN_RE = re.compile(
-    r"^([0-9]{2})"            # state code, validated by range below
+    r"^([0-3][0-9])"          # state code 01–39 (we validate range separately)
     r"([A-Z]{5}[0-9]{4}[A-Z])"  # PAN structure
     r"([1-9A-Z])"              # entity type
     r"Z"                       # always Z
@@ -280,7 +280,7 @@ def _extract_gstin(
 
     # Fallback: scan all tokens for something that looks like a GSTIN
     if value_tok is None:
-        gstin_re = re.compile(r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$")
+        gstin_re = re.compile(r"^[0-3][0-9][A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$")
         for tok in all_tokens:
             candidate = re.sub(r"[\s\-:]", "", tok.text).upper()
             if gstin_re.match(candidate):
@@ -738,6 +738,22 @@ def _extract_line_items(
     return items
 
 
+def _extract_place_of_supply(
+    rows: list[list[OCRToken]],
+    all_tokens: list[OCRToken],
+    image_width: int,
+) -> str:
+    """
+    Extract Place of Supply. Looks for 'Place of Supply', 'State', 'State Code', etc.
+    """
+    label = _find_token_matching(all_tokens, "Place of Supply", "Place of supply:", "State", "State Code")
+    if label:
+        val_tok = _find_value_in_row(rows, label, image_width)
+        if val_tok:
+            return val_tok.text.strip()
+    return ""
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -790,6 +806,7 @@ def extract_invoice(raw: RawOCRResult) -> ExtractedInvoice:
 
     # Optional but best-effort
     supplier_name = _extract_supplier_name(tokens)
+    place_of_supply = _extract_place_of_supply(rows, tokens, w)
     hsn_codes     = _extract_hsn_codes(rows, tokens)
     line_items    = _extract_line_items(rows, tokens)
 
@@ -802,6 +819,7 @@ def extract_invoice(raw: RawOCRResult) -> ExtractedInvoice:
         cgst=cgst,
         sgst=sgst,
         igst=igst,
+        place_of_supply=place_of_supply,
         hsn_codes=hsn_codes,
         line_items=line_items,
         field_confidences=all_fcs,

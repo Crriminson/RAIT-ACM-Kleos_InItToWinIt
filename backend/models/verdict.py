@@ -14,9 +14,14 @@ class Verdict(Base):
     reason_code = Column(String, nullable=False)
     reason_text_en = Column(String, nullable=False)
     reason_text_hi = Column(String)
+    action_text_en = Column(String)
+    action_text_hi = Column(String)
+    tts_url_en = Column(String)
+    tts_url_hi = Column(String)
     itc_impact_inr = Column(Float, nullable=False)
     confidence = Column(Float)
     match_status = Column(String)  # 'matched', 'unmatched', 'partial'
+    is_recoverable = Column(String) # 'true'/'false'/'unknown'
     
     invoice = relationship("Invoice", back_populates="verdicts")
     gstr2b_record = relationship("GSTR2BRecord", back_populates="verdicts")
