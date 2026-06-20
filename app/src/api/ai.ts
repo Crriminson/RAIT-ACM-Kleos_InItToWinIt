@@ -1,4 +1,4 @@
-import { AI_API_URL } from '../config';
+import { AI_API_URL, API_KEY } from '../config';
 import { Language } from '../i18n/strings';
 import { Invoice, PosMismatchResult, BlockedCreditVerdict } from '../data/types';
 
@@ -83,13 +83,19 @@ export interface EInvoiceAlertResponse {
 // could abort a slow scan mid-flight.
 const TIMEOUT_MS = 120000;
 
+function authHeaders(): Record<string, string> {
+  const h: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (API_KEY) h['X-API-Key'] = API_KEY;
+  return h;
+}
+
 async function postJson<T>(path: string, body: unknown): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
     const res = await fetch(`${AI_API_URL}${path}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify(body),
       signal: controller.signal,
     });
@@ -104,7 +110,7 @@ export async function checkHealth(): Promise<{ ok: boolean; geminiConfigured: bo
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 4000);
   try {
-    const res = await fetch(`${AI_API_URL}/api/health`, { signal: controller.signal });
+    const res = await fetch(`${AI_API_URL}/api/health`, { headers: authHeaders(), signal: controller.signal });
     return await res.json();
   } catch {
     return { ok: false, geminiConfigured: false };
@@ -165,7 +171,7 @@ export async function getEInvoiceAlert(args: {
 export async function checkPosMismatchBatch(
   invoices: Invoice[],
   trader: { gstin: string; registered_state_code: string },
-  lang: 'hi' | 'en' = 'hi',
+  lang: 'hi' | 'en' | 'mr' = 'hi',
 ): Promise<{ success: boolean; results?: PosMismatchResult[]; error?: string }> {
   try {
     const payloadInvoices = invoices.map(inv => {
@@ -190,7 +196,7 @@ export async function checkPosMismatchBatch(
 
     const res = await fetch(`${AI_API_URL}/api/pos-mismatch-batch`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify({
         invoices: payloadInvoices,
         trader: trader,
@@ -240,7 +246,7 @@ export async function getEarlyWarningList(): Promise<{ suppliers: EarlyWarningSu
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10000);
   try {
-    const res = await fetch(`${AI_API_URL}/api/v1/early-warning`, { signal: controller.signal });
+    const res = await fetch(`${AI_API_URL}/api/v1/early-warning`, { headers: authHeaders(), signal: controller.signal });
     if (!res.ok) throw new Error('Failed to fetch early warning data');
     return await res.json();
   } finally {

@@ -122,7 +122,7 @@ const IMS_COLORS: Record<ImsAction, { bg: string; text: string }> = {
   VERIFY:         { bg: colors.accentMuted,           text: colors.primary },
 };
 
-function ActionBadge({ action, lang }: { action: ImsAction; lang: 'hi' | 'en' }) {
+function ActionBadge({ action, lang }: { action: ImsAction; lang: 'hi' | 'en' | 'mr' }) {
   const { t } = useI18n();
   const colorCfg = action && IMS_COLORS[action] ? IMS_COLORS[action] : { bg: colors.surfaceRaised, text: colors.inkMuted };
   const { bg, text } = colorCfg;
@@ -142,7 +142,7 @@ function ActionBadge({ action, lang }: { action: ImsAction; lang: 'hi' | 'en' })
 }
 
 // ── "I disagree" affordance (FEATURE-011) ───────────────────────────────────
-function DisagreeButton({ resultId, lang }: { resultId: string; lang: 'hi' | 'en' }) {
+function DisagreeButton({ resultId, lang }: { resultId: string; lang: 'hi' | 'en' | 'mr' }) {
   const { t } = useI18n();
   const [agreed, setAgreed] = useState<'idle' | 'noted'>('idle');
 
@@ -207,7 +207,7 @@ function S17CautionStrip({ s17 }: { s17: NonNullable<DiagnosisResult['s17_5']> }
 }
 
 // ── Issue card ───────────────────────────────────────────────────────────────
-function IssueCard({ result, lang }: { result: DiagnosisResult; lang: 'hi' | 'en' }) {
+function IssueCard({ result, lang }: { result: DiagnosisResult; lang: 'hi' | 'en' | 'mr' }) {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   const [speaking, setSpeaking] = useState(false);
@@ -232,10 +232,10 @@ function IssueCard({ result, lang }: { result: DiagnosisResult; lang: 'hi' | 'en
   // What the speaker button reads aloud — amount + plain-language reason + action.
   // Built for both languages so we can fall back to English audio on devices
   // (e.g. MIUI) that have no Hindi voice installed.
-  const buildSpoken = (l: 'hi' | 'en'): string => {
+  const buildSpoken = (l: 'hi' | 'en' | 'mr'): string => {
     const amt = formatRupee(result.amount);
     const phrase =
-      l === 'hi'
+      l === 'hi' || l === 'mr'
         ? result.severity === 'blocked'
           ? `${amt} की ITC अटकी है।`
           : result.severity === 'pending'
@@ -246,8 +246,8 @@ function IssueCard({ result, lang }: { result: DiagnosisResult; lang: 'hi' | 'en
           : result.severity === 'pending'
             ? `${amt} of ITC needs follow-up.`
             : `${amt} of ITC is fine.`;
-    const r = l === 'hi' ? result.reason_hi : result.reason_en;
-    const a = l === 'hi' ? result.action_hi : result.action_en;
+    const r = (l === 'hi' || l === 'mr') ? result.reason_hi : result.reason_en;
+    const a = (l === 'hi' || l === 'mr') ? result.action_hi : result.action_en;
     return `${phrase} ${r}${result.severity !== 'resolved' ? ' ' + a : ''}`;
   };
 

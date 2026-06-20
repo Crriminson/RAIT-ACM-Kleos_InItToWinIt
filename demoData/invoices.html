@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Demo Invoices — Kleos</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, sans-serif; background: #f0f0f0; padding: 40px; }
+  .page-break { page-break-after: always; }
+
+  .invoice {
+    width: 800px; background: #fff; margin: 0 auto 60px; border: 2px solid #ddd;
+    border-radius: 4px; overflow: hidden;
+  }
+  .inv-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 28px 32px; color: #fff;
+  }
+  .inv-header h1 { font-size: 26px; font-weight: 800; }
+  .inv-header .addr { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+  .inv-header .right { text-align: right; }
+  .inv-header .right .label { font-size: 14px; font-weight: 700; letter-spacing: 1px; }
+  .inv-header .right .gstin { font-size: 13px; margin-top: 4px; opacity: 0.9; }
+
+  .inv-meta {
+    display: flex; justify-content: space-between;
+    padding: 20px 32px; border-bottom: 1px solid #e5e5e5;
+  }
+  .inv-meta .billed { color: #1a6dca; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .inv-meta .buyer-name { font-size: 15px; font-weight: 600; color: #222; }
+  .inv-meta .buyer-detail { font-size: 13px; color: #555; line-height: 1.5; }
+  .inv-meta .inv-info { text-align: right; }
+  .inv-meta .inv-info .inv-label { color: #1a6dca; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .inv-meta .inv-info div { font-size: 13px; color: #333; line-height: 1.6; }
+
+  .inv-table { width: 100%; border-collapse: collapse; }
+  .inv-table thead th {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 10px 16px; border-bottom: 2px solid; color: #444; background: #f5f7fa;
+  }
+  .inv-table tbody td {
+    padding: 14px 16px; font-size: 14px; color: #333; border-bottom: 1px solid #eee;
+  }
+  .inv-table tbody td:first-child { color: #888; }
+  .inv-table .desc { font-weight: 600; }
+
+  .inv-totals {
+    display: flex; justify-content: flex-end; padding: 16px 32px;
+  }
+  .inv-totals table { border-collapse: collapse; }
+  .inv-totals td { padding: 6px 16px; font-size: 14px; color: #555; }
+  .inv-totals td:last-child { text-align: right; font-weight: 600; color: #222; }
+  .inv-totals .total-row td { font-size: 18px; font-weight: 800; color: #111; border-top: 2px solid #333; padding-top: 10px; }
+
+  .inv-footer {
+    display: flex; justify-content: space-between; padding: 16px 32px;
+    background: #f8f8f8; border-top: 1px solid #e5e5e5;
+    font-size: 12px; color: #999;
+  }
+  .inv-footer .sig { font-style: italic; }
+
+  @media print {
+    body { background: #fff; padding: 0; }
+    .invoice { border: 2px solid #ccc; margin: 0; page-break-inside: avoid; }
+    .no-print { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="no-print" style="text-align:center;margin-bottom:30px;">
+  <h2 style="font-family:Inter;color:#333;">Demo Invoice Images — Kleos</h2>
+  <p style="color:#888;font-size:14px;">Right-click each invoice → "Save image as" or use Print → Save as PDF. Each invoice is 800px wide.</p>
+</div>
+
+<!-- INV-001: Ramesh Traders -->
+<div class="invoice page-break">
+  <div class="inv-header" style="background: linear-gradient(135deg, #1565C0, #0D47A1);">
+    <div>
+      <h1>Ramesh Traders</h1>
+      <div class="addr">Aminabad Market, Lucknow, UP</div>
+    </div>
+    <div class="right">
+      <div class="label">TAX INVOICE</div>
+      <div class="gstin">GSTIN: 09AAACR5055K1Z7</div>
+    </div>
+  </div>
+  <div class="inv-meta">
+    <div>
+      <div class="billed">Billed To</div>
+      <div class="buyer-name">Vijay Kirana Store</div>
+      <div class="buyer-detail">09AABCU9603R1ZX<br>Aminabad, Lucknow, Uttar Pradesh - 226018</div>
+    </div>
+    <div class="inv-info">
+      <div class="inv-label">Invoice</div>
+      <div>RT/2026/0547</div>
+      <div>Date: 08-05-2026</div>
+      <div>Place of Supply: 09-Uttar Pradesh</div>
+    </div>
+  </div>
+  <table class="inv-table">
+    <thead><tr style="border-color:#1565C0"><th>#</th><th>Description</th><th>HSN</th><th>QTY</th><th>Rate</th><th>Taxable</th><th>GST</th><th>Tax</th></tr></thead>
+    <tbody><tr><td>1</td><td class="desc">Basmati Rice</td><td>1006</td><td>200 KGS</td><td>₹240</td><td>₹48,000</td><td>5%</td><td>₹2,400</td></tr></tbody>
+  </table>
+  <div class="inv-totals">
+    <table>
+      <tr><td>Taxable Value</td><td>₹48,000</td></tr>
+      <tr><td>CGST @ 2.5%</td><td>₹1,200</td></tr>
+      <tr><td>SGST @ 2.5%</td><td>₹1,200</td></tr>
+      <tr class="total-row"><td><b>Total</b></td><td><b>₹50,400</b></td></tr>
+    </table>
+  </div>
+  <div class="inv-footer">
+    <div>This is a computer-generated tax invoice.</div>
+    <div class="sig">For Ramesh Traders</div>
+  </div>
+</div>
+
+<!-- INV-002: Sharma Supplies -->
+<div class="invoice page-break">
+  <div class="inv-header" style="background: linear-gradient(135deg, #2E7D32, #1B5E20);">
+    <div>
+      <h1>Sharma Supplies</h1>
+      <div class="addr">Chowk, Lucknow, UP</div>
+    </div>
+    <div class="right">
+      <div class="label">TAX INVOICE</div>
+      <div class="gstin">GSTIN: 09BBBCS8888M1Z5</div>
+    </div>
+  </div>
+  <div class="inv-meta">
+    <div>
+      <div class="billed">Billed To</div>
+      <div class="buyer-name">Vijay Kirana Store</div>
+      <div class="buyer-detail">09AABCU9603R1ZX<br>Aminabad, Lucknow, Uttar Pradesh - 226018</div>
+    </div>
+    <div class="inv-info">
+      <div class="inv-label">Invoice</div>
+      <div>SS/26-27/0412</div>
+      <div>Date: 12-05-2026</div>
+      <div>Place of Supply: 09-Uttar Pradesh</div>
+    </div>
+  </div>
+  <table class="inv-table">
+    <thead><tr style="border-color:#2E7D32"><th>#</th><th>Description</th><th>HSN</th><th>QTY</th><th>Rate</th><th>Taxable</th><th>GST</th><th>Tax</th></tr></thead>
+    <tbody><tr><td>1</td><td class="desc">Soap Bars & Detergent Powder</td><td>3401</td><td>150 NOS</td><td>₹100</td><td>₹15,000</td><td>18%</td><td>₹2,700</td></tr></tbody>
+  </table>
+  <div class="inv-totals">
+    <table>
+      <tr><td>Taxable Value</td><td>₹15,000</td></tr>
+      <tr><td>CGST @ 9%</td><td>₹1,350</td></tr>
+      <tr><td>SGST @ 9%</td><td>₹1,350</td></tr>
+      <tr class="total-row"><td><b>Total</b></td><td><b>₹17,700</b></td></tr>
+    </table>
+  </div>
+  <div class="inv-footer">
+    <div>This is a computer-generated tax invoice.</div>
+    <div class="sig">For Sharma Supplies</div>
+  </div>
+</div>
+
+<!-- INV-003: Gupta Electronics -->
+<div class="invoice page-break">
+  <div class="inv-header" style="background: linear-gradient(135deg, #1565C0, #0D47A1);">
+    <div>
+      <h1>Gupta Electronics</h1>
+      <div class="addr">Hazratganj, Lucknow, UP</div>
+    </div>
+    <div class="right">
+      <div class="label">TAX INVOICE</div>
+      <div class="gstin">GSTIN: 09CCCPG7777N1Z3</div>
+    </div>
+  </div>
+  <div class="inv-meta">
+    <div>
+      <div class="billed">Billed To</div>
+      <div class="buyer-name">Vijay Kirana Store</div>
+      <div class="buyer-detail">09AABCU9603R1ZX<br>Aminabad, Lucknow, Uttar Pradesh - 226018</div>
+    </div>
+    <div class="inv-info">
+      <div class="inv-label">Invoice</div>
+      <div>GE/26-27/1034</div>
+      <div>Date: 15-05-2026</div>
+      <div>Place of Supply: 09-Uttar Pradesh</div>
+    </div>
+  </div>
+  <table class="inv-table">
+    <thead><tr style="border-color:#1565C0"><th>#</th><th>Description</th><th>HSN</th><th>QTY</th><th>Rate</th><th>Taxable</th><th>GST</th><th>Tax</th></tr></thead>
+    <tbody><tr><td>1</td><td class="desc">LED Display Unit</td><td>8528</td><td>1 NOS</td><td>₹12,000</td><td>₹12,000</td><td>18%</td><td>₹2,160</td></tr></tbody>
+  </table>
+  <div class="inv-totals">
+    <table>
+      <tr><td>Taxable Value</td><td>₹12,000</td></tr>
+      <tr><td>CGST @ 9%</td><td>₹1,080</td></tr>
+      <tr><td>SGST @ 9%</td><td>₹1,080</td></tr>
+      <tr class="total-row"><td><b>Total</b></td><td><b>₹14,160</b></td></tr>
+    </table>
+  </div>
+  <div class="inv-footer">
+    <div>This is a computer-generated tax invoice.</div>
+    <div class="sig">For Gupta Electronics</div>
+  </div>
+</div>
+
+<!-- INV-004: Patel Brothers -->
+<div class="invoice page-break">
+  <div class="inv-header" style="background: linear-gradient(135deg, #E65100, #BF360C);">
+    <div>
+      <h1>Patel Brothers</h1>
+      <div class="addr">Alambagh, Lucknow, UP</div>
+    </div>
+    <div class="right">
+      <div class="label">TAX INVOICE</div>
+      <div class="gstin">GSTIN: 09DDDPP6666L1Z1</div>
+    </div>
+  </div>
+  <div class="inv-meta">
+    <div>
+      <div class="billed">Billed To</div>
+      <div class="buyer-name">Vijay Kirana Store</div>
+      <div class="buyer-detail">09AABCU9603R1ZX<br>Aminabad, Lucknow, Uttar Pradesh - 226018</div>
+    </div>
+    <div class="inv-info">
+      <div class="inv-label">Invoice</div>
+      <div>PB/2026/3321</div>
+      <div>Date: 03-05-2026</div>
+      <div>Place of Supply: 09-Uttar Pradesh</div>
+    </div>
+  </div>
+  <table class="inv-table">
+    <thead><tr style="border-color:#E65100"><th>#</th><th>Description</th><th>HSN</th><th>QTY</th><th>Rate</th><th>Taxable</th><th>GST</th><th>Tax</th></tr></thead>
+    <tbody><tr><td>1</td><td class="desc">Milk Powder & Dairy Products</td><td>0402</td><td>400 KGS</td><td>₹80</td><td>₹32,000</td><td>5%</td><td>₹1,600</td></tr></tbody>
+  </table>
+  <div class="inv-totals">
+    <table>
+      <tr><td>Taxable Value</td><td>₹32,000</td></tr>
+      <tr><td>CGST @ 2.5%</td><td>₹800</td></tr>
+      <tr><td>SGST @ 2.5%</td><td>₹800</td></tr>
+      <tr class="total-row"><td><b>Total</b></td><td><b>₹33,600</b></td></tr>
+    </table>
+  </div>
+  <div class="inv-footer">
+    <div>This is a computer-generated tax invoice.</div>
+    <div class="sig">For Patel Brothers</div>
+  </div>
+</div>
+
+<!-- INV-005: Kumar General Store -->
+<div class="invoice page-break">
+  <div class="inv-header" style="background: linear-gradient(135deg, #6A1B9A, #4A148C);">
+    <div>
+      <h1>Kumar General Store</h1>
+      <div class="addr">Kapoorthala, Lucknow, UP</div>
+    </div>
+    <div class="right">
+      <div class="label">TAX INVOICE</div>
+      <div class="gstin">GSTIN: 09EEEKK5555P1Z9</div>
+    </div>
+  </div>
+  <div class="inv-meta">
+    <div>
+      <div class="billed">Billed To</div>
+      <div class="buyer-name">Vijay Kirana Store</div>
+      <div class="buyer-detail">09AABCU9603R1ZX<br>Aminabad, Lucknow, Uttar Pradesh - 226018</div>
+    </div>
+    <div class="inv-info">
+      <div class="inv-label">Invoice</div>
+      <div>KGS/26/0088</div>
+      <div>Date: 11-05-2026</div>
+      <div>Place of Supply: 09-Uttar Pradesh</div>
+    </div>
+  </div>
+  <table class="inv-table">
+    <thead><tr style="border-color:#6A1B9A"><th>#</th><th>Description</th><th>HSN</th><th>QTY</th><th>Rate</th><th>Taxable</th><th>GST</th><th>Tax</th></tr></thead>
+    <tbody><tr><td>1</td><td class="desc">Cane Sugar</td><td>1701</td><td>600 KGS</td><td>₹30</td><td>₹18,000</td><td>5%</td><td>₹900</td></tr></tbody>
+  </table>
+  <div class="inv-totals">
+    <table>
+      <tr><td>Taxable Value</td><td>₹18,000</td></tr>
+      <tr><td>CGST @ 2.5%</td><td>₹450</td></tr>
+      <tr><td>SGST @ 2.5%</td><td>₹450</td></tr>
+      <tr class="total-row"><td><b>Total</b></td><td><b>₹18,900</b></td></tr>
+    </table>
+  </div>
+  <div class="inv-footer">
+    <div>This is a computer-generated tax invoice.</div>
+    <div class="sig">For Kumar General Store</div>
+  </div>
+</div>
+
+<!-- INV-006: Singh Oil Mills -->
+<div class="invoice page-break">
+  <div class="inv-header" style="background: linear-gradient(135deg, #00695C, #004D40);">
+    <div>
+      <h1>Singh Oil Mills</h1>
+      <div class="addr">Gomti Nagar, Lucknow, UP</div>
+    </div>
+    <div class="right">
+      <div class="label">TAX INVOICE</div>
+      <div class="gstin">GSTIN: 09FFFSS4444Q1Z7</div>
+    </div>
+  </div>
+  <div class="inv-meta">
+    <div>
+      <div class="billed">Billed To</div>
+      <div class="buyer-name">Vijay Kirana Store</div>
+      <div class="buyer-detail">09AABCU9603R1ZX<br>Aminabad, Lucknow, Uttar Pradesh - 226018</div>
+    </div>
+    <div class="inv-info">
+      <div class="inv-label">Invoice</div>
+      <div>SOM/2026/0271</div>
+      <div>Date: 19-05-2026</div>
+      <div>Place of Supply: 09-Uttar Pradesh</div>
+    </div>
+  </div>
+  <table class="inv-table">
+    <thead><tr style="border-color:#00695C"><th>#</th><th>Description</th><th>HSN</th><th>QTY</th><th>Rate</th><th>Taxable</th><th>GST</th><th>Tax</th></tr></thead>
+    <tbody><tr><td>1</td><td class="desc">Groundnut Oil</td><td>1508</td><td>250 LTR</td><td>₹100</td><td>₹25,000</td><td>5%</td><td>₹1,250</td></tr></tbody>
+  </table>
+  <div class="inv-totals">
+    <table>
+      <tr><td>Taxable Value</td><td>₹25,000</td></tr>
+      <tr><td>CGST @ 2.5%</td><td>₹625</td></tr>
+      <tr><td>SGST @ 2.5%</td><td>₹625</td></tr>
+      <tr class="total-row"><td><b>Total</b></td><td><b>₹26,250</b></td></tr>
+    </table>
+  </div>
+  <div class="inv-footer">
+    <div>This is a computer-generated tax invoice.</div>
+    <div class="sig">For Singh Oil Mills</div>
+  </div>
+</div>
+
+<!-- INV-007: Delhi Spice Co. -->
+<div class="invoice page-break">
+  <div class="inv-header" style="background: linear-gradient(135deg, #C62828, #B71C1C);">
+    <div>
+      <h1>Delhi Spice Co.</h1>
+      <div class="addr">Sadar Bazaar, Lucknow, UP</div>
+    </div>
+    <div class="right">
+      <div class="label">TAX INVOICE</div>
+      <div class="gstin">GSTIN: 09GGGDS3333R1Z5</div>
+    </div>
+  </div>
+  <div class="inv-meta">
+    <div>
+      <div class="billed">Billed To</div>
+      <div class="buyer-name">Vijay Kirana Store</div>
+      <div class="buyer-detail">09AABCU9603R1ZX<br>Aminabad, Lucknow, Uttar Pradesh - 226018</div>
+    </div>
+    <div class="inv-info">
+      <div class="inv-label">Invoice</div>
+      <div>DSC/26/0198</div>
+      <div>Date: 22-05-2026</div>
+      <div>Place of Supply: 09-Uttar Pradesh</div>
+    </div>
+  </div>
+  <table class="inv-table">
+    <thead><tr style="border-color:#C62828"><th>#</th><th>Description</th><th>HSN</th><th>QTY</th><th>Rate</th><th>Taxable</th><th>GST</th><th>Tax</th></tr></thead>
+    <tbody><tr><td>1</td><td class="desc">Turmeric Powder & Spices</td><td>0910</td><td>100 KGS</td><td>₹200</td><td>₹20,000</td><td>18%</td><td>₹3,600</td></tr></tbody>
+  </table>
+  <div class="inv-totals">
+    <table>
+      <tr><td>Taxable Value</td><td>₹20,000</td></tr>
+      <tr><td>CGST @ 9%</td><td>₹1,800</td></tr>
+      <tr><td>SGST @ 9%</td><td>₹1,800</td></tr>
+      <tr class="total-row"><td><b>Total</b></td><td><b>₹23,600</b></td></tr>
+    </table>
+  </div>
+  <div class="inv-footer">
+    <div>This is a computer-generated tax invoice.</div>
+    <div class="sig">For Delhi Spice Co.</div>
+  </div>
+</div>
+
+<!-- INV-008: Royal Restaurant & Caterers -->
+<div class="invoice">
+  <div class="inv-header" style="background: linear-gradient(135deg, #F57F17, #E65100);">
+    <div>
+      <h1>Royal Restaurant & Caterers</h1>
+      <div class="addr">Mahanagar, Lucknow, UP</div>
+    </div>
+    <div class="right">
+      <div class="label">TAX INVOICE</div>
+      <div class="gstin">GSTIN: 09HHHRL2222S1Z3</div>
+    </div>
+  </div>
+  <div class="inv-meta">
+    <div>
+      <div class="billed">Billed To</div>
+      <div class="buyer-name">Vijay Kirana Store</div>
+      <div class="buyer-detail">09AABCU9603R1ZX<br>Aminabad, Lucknow, Uttar Pradesh - 226018</div>
+    </div>
+    <div class="inv-info">
+      <div class="inv-label">Invoice</div>
+      <div>RRC/2026/0055</div>
+      <div>Date: 25-05-2026</div>
+      <div>Place of Supply: 09-Uttar Pradesh</div>
+    </div>
+  </div>
+  <table class="inv-table">
+    <thead><tr style="border-color:#F57F17"><th>#</th><th>Description</th><th>HSN</th><th>QTY</th><th>Rate</th><th>Taxable</th><th>GST</th><th>Tax</th></tr></thead>
+    <tbody><tr><td>1</td><td class="desc">Catering Services for Shop Opening Event</td><td>9963</td><td>1 NOS</td><td>₹10,000</td><td>₹10,000</td><td>18%</td><td>₹1,800</td></tr></tbody>
+  </table>
+  <div class="inv-totals">
+    <table>
+      <tr><td>Taxable Value</td><td>₹10,000</td></tr>
+      <tr><td>CGST @ 9%</td><td>₹900</td></tr>
+      <tr><td>SGST @ 9%</td><td>₹900</td></tr>
+      <tr class="total-row"><td><b>Total</b></td><td><b>₹11,800</b></td></tr>
+    </table>
+  </div>
+  <div class="inv-footer">
+    <div>This is a computer-generated tax invoice.</div>
+    <div class="sig">For Royal Restaurant & Caterers</div>
+  </div>
+</div>
+
+</body>
+</html>

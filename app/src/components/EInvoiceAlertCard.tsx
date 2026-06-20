@@ -7,7 +7,7 @@ import { EInvoiceAlertData } from '../api/ai';
 
 interface EInvoiceAlertCardProps {
   alert: EInvoiceAlertData;
-  lang: 'en' | 'hi';
+  lang: 'en' | 'hi' | 'mr';
   onDismiss: () => void;
 }
 

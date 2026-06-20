@@ -21,9 +21,13 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
+
+limiter = Limiter(key_func=get_remote_address)
 
 from api.deps import get_db
 from core.extractor import extract_invoice
@@ -79,7 +83,9 @@ def _load_gstr2b(db: Session, period: Optional[str]) -> list[GSTR2BRecord]:
     summary="Analyze an invoice image against GSTR-2B",
     response_description="Verdict payload with action, reason, and ITC impact",
 )
+@limiter.limit("20/minute")
 async def analyze_invoice(
+    request: Request,
     file: UploadFile = File(..., description="Invoice image (PNG/JPEG/WebP)"),
     gstr2b_period: Optional[str] = Form(
         None,
@@ -113,7 +119,13 @@ async def analyze_invoice(
             },
         )
 
-    image_bytes = await file.read()
+    MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+    image_bytes = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(image_bytes) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail={"error": "file_too_large", "detail": f"Upload exceeds {MAX_UPLOAD_BYTES // (1024*1024)} MB limit."},
+        )
     if len(image_bytes) == 0:
         raise HTTPException(
             status_code=400,

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AI_API_URL } from '../config';
+import { AI_API_URL, API_KEY } from '../config';
 
 interface RAGResponse {
   answer: string;
@@ -17,9 +17,11 @@ export function useRAG() {
     setLoading(true);
     setError(null);
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (API_KEY) headers['X-API-Key'] = API_KEY;
       const res = await fetch(`${AI_API_URL}/api/rag/query`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ question, top_k: 5 }),
       });
       if (!res.ok) throw new Error(`API error: ${res.status}`);

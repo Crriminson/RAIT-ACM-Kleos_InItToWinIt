@@ -4,6 +4,8 @@ import strings, { Language, Strings } from './strings';
 
 const STORAGE_KEY = '@kleos/lang';
 
+const LANG_CYCLE: Language[] = ['hi', 'en', 'mr'];
+
 interface I18nContextValue {
   lang: Language;
   t: Strings;
@@ -17,12 +19,11 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Language>('hi');
   const [loaded, setLoaded] = useState(false);
 
-  // Load the saved language once on startup.
   useEffect(() => {
     (async () => {
       try {
         const saved = await AsyncStorage.getItem(STORAGE_KEY);
-        if (saved === 'hi' || saved === 'en') setLangState(saved);
+        if (saved === 'hi' || saved === 'en' || saved === 'mr') setLangState(saved);
       } catch {
         // fall back to default
       } finally {
@@ -37,9 +38,11 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setLang = useCallback((next: Language) => persist(next), [persist]);
+
   const toggle = useCallback(() => {
     setLangState((prev) => {
-      const next = prev === 'hi' ? 'en' : 'hi';
+      const idx = LANG_CYCLE.indexOf(prev);
+      const next = LANG_CYCLE[(idx + 1) % LANG_CYCLE.length];
       AsyncStorage.setItem(STORAGE_KEY, next).catch(() => {});
       return next;
     });
@@ -50,7 +53,6 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     [lang, setLang, toggle],
   );
 
-  // Avoid a flash of the default language before the saved one loads.
   if (!loaded) return null;
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;

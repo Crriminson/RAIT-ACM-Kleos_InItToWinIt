@@ -3,9 +3,10 @@ import { View, StyleSheet, TouchableOpacity, Animated, Dimensions } from 'react-
 import { Text } from '../components/AppText';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { IndianRupee, ArrowRight, HelpCircle } from 'lucide-react-native';
+import { IndianRupee, ArrowRight, HelpCircle, Globe } from 'lucide-react-native';
 import { colors, typography, spacing, radii, elevation } from '../theme/tokens';
 import { useI18n } from '../i18n/context';
+import { Language } from '../i18n/strings';
 import { useProfile } from '../data/contexts/profile-context';
 import { RootStackParamList } from '../navigation/types';
 
@@ -14,7 +15,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Splash'>;
 const { width } = Dimensions.get('window');
 
 export default function SplashScreen({ navigation }: Props) {
-  const { t, toggle } = useI18n();
+  const { t, lang, setLang, toggle } = useI18n();
   const { profile } = useProfile();
 
   const fade = useRef(new Animated.Value(0)).current;
@@ -47,9 +48,11 @@ export default function SplashScreen({ navigation }: Props) {
             <View style={styles.valueChip}>
               <IndianRupee size={16} color={colors.primary} />
               <Text style={styles.valueChipText}>
-                {t.splash.headline === 'अपना GST खुद समझें'
+                {lang === 'hi'
                   ? 'हर महीने ₹हज़ारों की ITC बचाएं'
-                  : 'Save thousands in ITC every month'}
+                  : lang === 'mr'
+                    ? 'दर महिन्याला ₹हजारो ITC वाचवा'
+                    : 'Save thousands in ITC every month'}
               </Text>
             </View>
           </Animated.View>
@@ -78,15 +81,20 @@ export default function SplashScreen({ navigation }: Props) {
             <Text style={styles.newUserText}>{t.splash.newUserCta}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={toggle}
-            style={styles.langToggle}
-            hitSlop={{ top: 8, bottom: 8, left: 16, right: 16 }}
-            accessibilityRole="button"
-            accessibilityLabel={t.a11y.switchLanguage}
-          >
-            <Text style={styles.langToggleText}>{t.splash.switchLang}</Text>
-          </TouchableOpacity>
+          <View style={styles.langPillRow}>
+            <Globe size={14} color={colors.inkMuted} />
+            {([['hi', 'हिंदी'], ['en', 'English'], ['mr', 'मराठी']] as [Language, string][]).map(([code, label]) => (
+              <TouchableOpacity
+                key={code}
+                onPress={() => setLang(code)}
+                style={[styles.langPill, lang === code && styles.langPillActive]}
+                accessibilityRole="button"
+                accessibilityLabel={label}
+              >
+                <Text style={[styles.langPillText, lang === code && styles.langPillTextActive]}>{label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </Animated.View>
       </SafeAreaView>
     </View>
@@ -181,15 +189,31 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
-  langToggle: {
+  langPillRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
     paddingVertical: spacing.sm,
   },
-  langToggleText: {
-    ...typography.body,
+  langPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: radii.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: 'transparent',
+  },
+  langPillActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  langPillText: {
+    fontSize: 13,
+    fontWeight: '600',
     color: colors.inkMuted,
-    fontWeight: '500',
-    width: '100%',
-    textAlign: 'center',
+  },
+  langPillTextActive: {
+    color: '#FFFFFF',
   },
 });

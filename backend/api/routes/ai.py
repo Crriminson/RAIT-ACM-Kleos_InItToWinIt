@@ -28,6 +28,12 @@ from core import gemini
 
 log = logging.getLogger(__name__)
 
+from fastapi import Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+limiter = Limiter(key_func=get_remote_address)
+
 router = APIRouter(tags=["ai"])
 
 
@@ -121,7 +127,8 @@ class F13Request(BaseModel):
 # ---------------------------------------------------------------------------
 
 @router.post("/api/gst-doubt")
-async def gst_doubt(body: GstDoubtRequest) -> dict:
+@limiter.limit("10/minute")
+async def gst_doubt(request: Request, body: GstDoubtRequest) -> dict:
     question = (body.question or "").strip()
     if not question:
         return {"success": False, "error": "Please provide a valid question."}
@@ -155,7 +162,8 @@ async def gst_doubt(body: GstDoubtRequest) -> dict:
 # ---------------------------------------------------------------------------
 
 @router.post("/api/ai-advice")
-async def ai_advice(body: AiAdviceRequest) -> dict:
+@limiter.limit("10/minute")
+async def ai_advice(request: Request, body: AiAdviceRequest) -> dict:
     results = body.results or []
     prompt = (
         "You are an expert Indian CA specializing in GST reconciliation, GSTR-2B "
@@ -188,7 +196,8 @@ async def ai_advice(body: AiAdviceRequest) -> dict:
 # ---------------------------------------------------------------------------
 
 @router.post("/api/tax-planning")
-async def tax_planning(body: TaxPlanningRequest) -> dict:
+@limiter.limit("10/minute")
+async def tax_planning(request: Request, body: TaxPlanningRequest) -> dict:
     is_hindi = body.lang == "hi"
     blocked = f"{body.totalBlockedAmt:,.0f}"
     prompt = (

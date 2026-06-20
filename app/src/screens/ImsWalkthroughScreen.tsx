@@ -24,7 +24,7 @@ interface StepProps {
   title_hi: string;
   desc_en: string;
   desc_hi: string;
-  lang: 'hi' | 'en';
+  lang: 'hi' | 'en' | 'mr';
 }
 
 function WalkthroughStep({ num, icon, title_en, title_hi, desc_en, desc_hi, lang }: StepProps) {

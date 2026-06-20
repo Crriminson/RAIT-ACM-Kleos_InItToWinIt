@@ -24,7 +24,7 @@ function formatRunTime(ts: number): string {
   return `${day} ${months[d.getMonth()]} · ${time}`;
 }
 
-function HistoryGroup({ record, lang }: { record: SessionRecord; lang: 'hi' | 'en' }) {
+function HistoryGroup({ record, lang }: { record: SessionRecord; lang: 'hi' | 'en' | 'mr' }) {
   const [expanded, setExpanded] = useState(false);
 
   return (

@@ -307,7 +307,7 @@ export function computeSummary(results: DiagnosisResult[]) {
   return { totalBlocked, totalPending, issueCount, resolvedCount, totalResolved };
 }
 
-export function generateWhatsAppMessage(result: DiagnosisResult, lang: 'hi' | 'en'): string {
+export function generateWhatsAppMessage(result: DiagnosisResult, lang: 'hi' | 'en' | 'mr'): string {
   if (lang === 'hi' && result.supplierMessageDraftHi) {
     return result.supplierMessageDraftHi;
   }

@@ -38,7 +38,7 @@ function severityBg(s: Severity) {
     : colors.severity.resolvedBg;
 }
 
-function severityLabel(s: Severity, lang: 'hi' | 'en') {
+function severityLabel(s: Severity, lang: 'hi' | 'en' | 'mr') {
   return s === 'blocked' ? (lang === 'hi' ? 'अस्वीकार' : 'Reject')
     : s === 'pending' ? (lang === 'hi' ? 'होल्ड' : 'Hold')
     : (lang === 'hi' ? 'स्वीकार' : 'Accept');

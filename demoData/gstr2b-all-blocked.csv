@@ -1,0 +1,5 @@
+GSTIN of Supplier,Trade Name,Invoice Number,Invoice Date,Invoice Value,Taxable Value,IGST,CGST,SGST,Place of Supply,Reverse Charge,HSN Code,Description,Quantity,Unit,Item Taxable Value,Tax Rate,Item CGST,Item SGST,Item IGST
+09ZZZUR1111Q1Z5,Unknown Traders,XX-0001,05-05-2026,11800,10000,0,900,900,09-Uttar Pradesh,N,1234,Miscellaneous goods,1,NOS,10000,18,900,900,0
+09YYYTR2222P1Z3,Other Supplier,YY-0002,09-05-2026,23600,20000,0,1800,1800,09-Uttar Pradesh,N,5678,Other goods,1,NOS,20000,18,1800,1800,0
+09GGGDS3333R1Z5,Delhi Spice Co.,DSC/26/0198,22-05-2026,23600,20000,3600,0,0,07-Delhi,N,0910,Turmeric powder & spices,100,KGS,20000,18,0,0,3600
+09HHHRL2222S1Z3,Royal Restaurant & Caterers,RRC/2026/0055,25-05-2026,11800,10000,0,900,900,09-Uttar Pradesh,N,4321,Unknown services,1,NOS,10000,18,900,900,0

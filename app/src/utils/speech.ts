@@ -22,7 +22,7 @@ export interface SpeakHandlers {
 
 export interface SpeakFallback {
   text: string;
-  lang: 'hi' | 'en';
+  lang: 'hi' | 'en' | 'mr';
 }
 
 let voicesCache: Speech.Voice[] | null = null;
@@ -38,17 +38,17 @@ async function loadVoices(): Promise<Speech.Voice[]> {
   }
 }
 
-function findVoice(voices: Speech.Voice[], lang: 'hi' | 'en'): Speech.Voice | undefined {
-  const prefix = lang === 'hi' ? 'hi' : 'en';
+function findVoice(voices: Speech.Voice[], lang: 'hi' | 'en' | 'mr'): Speech.Voice | undefined {
+  const prefix = lang === 'mr' ? 'mr' : lang === 'hi' ? 'hi' : 'en';
   return voices.find((v) => (v.language || '').toLowerCase().replace('_', '-').startsWith(prefix));
 }
 
-function doSpeak(text: string, lang: 'hi' | 'en', voiceId: string | undefined, handlers: SpeakHandlers): void {
+function doSpeak(text: string, lang: 'hi' | 'en' | 'mr', voiceId: string | undefined, handlers: SpeakHandlers): void {
   handlers.onStart?.();
   Speech.speak(text, {
-    language: lang === 'hi' ? 'hi-IN' : 'en-IN',
+    language: lang === 'mr' ? 'mr-IN' : lang === 'hi' ? 'hi-IN' : 'en-IN',
     voice: voiceId,
-    rate: lang === 'hi' ? 0.92 : 0.96,
+    rate: lang === 'en' ? 0.96 : 0.92,
     pitch: 1.0,
     onDone: handlers.onDone,
     onStopped: handlers.onDone,
@@ -63,7 +63,7 @@ function doSpeak(text: string, lang: 'hi' | 'en', voiceId: string | undefined, h
  */
 export async function speak(
   text: string,
-  lang: 'hi' | 'en',
+  lang: 'hi' | 'en' | 'mr',
   handlers: SpeakHandlers = {},
   fallback?: SpeakFallback,
 ): Promise<void> {

@@ -24,11 +24,14 @@ import {
   Scale,
   Receipt,
   CalendarClock,
+  Mic,
+  MicOff,
 } from 'lucide-react-native';
 import { Text } from '../components/AppText';
 import { colors, typography, spacing, radii, elevation } from '../theme/tokens';
 import { useI18n } from '../i18n/context';
 import { askGstDoubt } from '../api/ai';
+import { startRecording, stopRecordingAndTranscribe, isSttAvailable, translateToMarathi } from '../api/sarvam';
 
 interface Msg {
   id: string;
@@ -109,7 +112,7 @@ const LEARN_TOPICS: LearnTopic[] = [
   },
 ];
 
-function LearnCard({ topic, lang }: { topic: LearnTopic; lang: 'hi' | 'en' }) {
+function LearnCard({ topic, lang }: { topic: LearnTopic; lang: 'hi' | 'en' | 'mr' }) {
   const [expanded, setExpanded] = useState(false);
   const rotation = useRef(new Animated.Value(0)).current;
 
@@ -159,8 +162,28 @@ export default function AskCaScreen() {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Msg[]>([]);
   const [busy, setBusy] = useState(false);
+  const [recording, setRecording] = useState(false);
   const [activeTab, setActiveTab] = useState<'learn' | 'ask'>('ask');
   const scrollRef = useRef<ScrollView>(null);
+
+  const handleMic = async () => {
+    if (recording) {
+      try {
+        setRecording(false);
+        const transcript = await stopRecordingAndTranscribe(lang);
+        if (transcript.trim()) setInput((prev) => (prev ? prev + ' ' : '') + transcript.trim());
+      } catch {
+        // silently fail — user can still type
+      }
+    } else {
+      try {
+        await startRecording();
+        setRecording(true);
+      } catch {
+        // permission denied or device unsupported
+      }
+    }
+  };
 
   const send = async (questionText?: string) => {
     const question = (questionText ?? input).trim();
@@ -174,22 +197,26 @@ export default function AskCaScreen() {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
 
     try {
-      const { answer, method } = await askGstDoubt(question, lang);
+      // Ask in Hindi (Gemini handles hi/en well); translate to Marathi if needed.
+      const queryLang = lang === 'mr' ? 'hi' : lang;
+      const { answer, method } = await askGstDoubt(question, queryLang);
+      let finalAnswer = answer;
+      if (lang === 'mr') {
+        try { finalAnswer = await translateToMarathi(answer, 'hi'); } catch { /* use original */ }
+      }
       setMessages((m) => [
         ...m,
-        { id: `c-${Date.now()}`, role: 'ca', text: answer, offline: method === 'fallback' },
+        { id: `c-${Date.now()}`, role: 'ca', text: finalAnswer, offline: method === 'fallback' },
       ]);
     } catch {
+      const errorTexts: Record<string, string> = {
+        hi: 'अभी जवाब नहीं मिल पाया। Server चालू है या नहीं जांचें।',
+        en: "Couldn't reach the assistant. Check that the AI server is running.",
+        mr: 'सध्या उत्तर मिळू शकले नाही. Server चालू आहे का ते तपासा.',
+      };
       setMessages((m) => [
         ...m,
-        {
-          id: `c-${Date.now()}`,
-          role: 'ca',
-          text: lang === 'hi'
-            ? 'अभी जवाब नहीं मिल पाया। Server चालू है या नहीं जांचें।'
-            : "Couldn't reach the assistant. Check that the AI server is running.",
-          offline: true,
-        },
+        { id: `c-${Date.now()}`, role: 'ca', text: errorTexts[lang] ?? errorTexts.en, offline: true },
       ]);
     } finally {
       setBusy(false);
@@ -327,6 +354,17 @@ export default function AskCaScreen() {
         </ScrollView>
 
         <View style={styles.inputBar}>
+          {isSttAvailable() && (
+            <TouchableOpacity
+              style={[styles.micButton, recording && styles.micButtonActive]}
+              onPress={handleMic}
+              activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityLabel={recording ? 'Stop recording' : 'Start voice input'}
+            >
+              {recording ? <MicOff size={20} color="#FFFFFF" /> : <Mic size={20} color={colors.primary} />}
+            </TouchableOpacity>
+          )}
           <TextInput
             style={styles.input}
             value={input}
@@ -541,6 +579,17 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 10,
     maxHeight: 120,
+  },
+  micButton: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: colors.surfaceRaised,
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  micButtonActive: {
+    backgroundColor: colors.severity.blocked,
+    borderColor: colors.severity.blocked,
   },
   sendButton: {
     width: 44, height: 44, borderRadius: 22,

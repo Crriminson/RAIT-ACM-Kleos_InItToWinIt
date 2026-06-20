@@ -29,10 +29,14 @@ import logging
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
+
+limiter = Limiter(key_func=get_remote_address)
 
 from api.deps import get_db
 from core import gemini
@@ -165,7 +169,9 @@ def _empty_extracted_data() -> dict[str, Any]:
     summary="Analyze invoice (app-compatible JSON endpoint)",
     response_description="Extracted invoice data in app format",
 )
+@limiter.limit("20/minute")
 async def analyze_invoice_compat(
+    request: Request,
     body: AnalyzeInvoiceRequest,
     db: Session = Depends(get_db),
 ) -> JSONResponse:
@@ -176,6 +182,7 @@ async def analyze_invoice_compat(
     and returns ExtractedInvoiceData in the shape api/ai.ts expects.
     """
     # 1. Decode base64 → bytes
+    MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
     try:
         raw_b64 = body.base64Data
         if "," in raw_b64:
@@ -191,6 +198,12 @@ async def analyze_invoice_compat(
         raise HTTPException(
             status_code=400,
             detail={"error": "empty_image", "detail": "Decoded image is empty."},
+        )
+
+    if len(image_bytes) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail={"error": "file_too_large", "detail": f"Image exceeds {MAX_UPLOAD_BYTES // (1024*1024)} MB limit."},
         )
 
     # 2. Offline OCR pipeline (PRIMARY) — our own PaddleOCR + extractor.

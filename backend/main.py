@@ -1,12 +1,17 @@
 import logging
+import os
 
 from dotenv import load_dotenv
 
 # Load backend/.env (GEMINI_API_KEY, etc.) before any module reads os.environ.
 load_dotenv()
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from api.routes import invoices as invoices_router
 from api.routes import analyze_compat
@@ -17,6 +22,7 @@ from api.routes import summary as summary_router
 from api.routes import early_warning as early_warning_router
 from api.routes import chat as chat_router
 from api.routes import webhooks as webhooks_router
+from api.auth import require_api_key
 from core import gemini
 from db.session import Base, engine
 
@@ -25,6 +31,11 @@ logging.basicConfig(level=logging.INFO)
 # Create DB tables on startup (Alembic handles migrations in prod;
 # this is a convenience for the hackathon SQLite dev environment).
 Base.metadata.create_all(bind=engine)
+
+# ── Rate limiter ────────────────────────────────────────────────────────────
+# Targets paid-API paths (Gemini OCR, Ask-CA chat) to control per-call cost.
+# Local-only endpoints (health, reconciliation) are not rate-limited.
+limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(
     title="KLEOS D4-PS1 Backend",
@@ -35,26 +46,65 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CORS — open for hackathon/development
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# ── CORS — restricted to known origins ──────────────────────────────────────
+# KLEOS_CORS_ORIGINS: comma-separated list.  Falls back to common dev origins.
+_cors_raw = os.getenv("KLEOS_CORS_ORIGINS", "")
+ALLOWED_ORIGINS = [o.strip() for o in _cors_raw.split(",") if o.strip()] if _cors_raw else [
+    "http://localhost:8081",     # Expo web (metro)
+    "http://localhost:19006",    # Expo web alt port
+    "http://localhost:3000",     # landing page dev server
+    "http://192.168.5.93:8081",  # LAN dev (from .env)
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Content-Type", "X-API-Key", "Authorization"],
 )
 
-# Routes
-app.include_router(invoices_router.router, prefix="/api/v1")
-app.include_router(analyze_compat.router)  # app-compatible JSON endpoint at /api/analyze-invoice
-app.include_router(ai_router.router)       # app-compatible AI endpoints (gst-doubt, ai-advice, ...)
-app.include_router(reconciliation_router.router, prefix="/api/v1")
-app.include_router(verdicts_router.router, prefix="/api/v1")
-app.include_router(summary_router.router, prefix="/api/v1")
-app.include_router(early_warning_router.router, prefix="/api/v1")
-app.include_router(chat_router.router)  # RAG endpoints at /api/rag/*
+# ── Authenticated routes (require X-API-Key header) ─────────────────────────
+app.include_router(
+    invoices_router.router, prefix="/api/v1",
+    dependencies=[Depends(require_api_key)],
+)
+app.include_router(
+    analyze_compat.router,
+    dependencies=[Depends(require_api_key)],
+)
+app.include_router(
+    ai_router.router,
+    dependencies=[Depends(require_api_key)],
+)
+app.include_router(
+    reconciliation_router.router, prefix="/api/v1",
+    dependencies=[Depends(require_api_key)],
+)
+app.include_router(
+    verdicts_router.router, prefix="/api/v1",
+    dependencies=[Depends(require_api_key)],
+)
+app.include_router(
+    summary_router.router, prefix="/api/v1",
+    dependencies=[Depends(require_api_key)],
+)
+app.include_router(
+    early_warning_router.router, prefix="/api/v1",
+    dependencies=[Depends(require_api_key)],
+)
+app.include_router(
+    chat_router.router,
+    dependencies=[Depends(require_api_key)],
+)
+
+# ── Webhook — uses its own signature verification, not API key ──────────────
 app.include_router(webhooks_router.router, prefix="/api/v1")
 
+# ── Public routes (no auth) ─────────────────────────────────────────────────
 
 @app.on_event("startup")
 async def _warm_ocr_models() -> None:
