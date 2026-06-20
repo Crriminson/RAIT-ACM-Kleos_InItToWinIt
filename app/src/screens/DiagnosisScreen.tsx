@@ -528,58 +528,40 @@ export default function DiagnosisScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Dark surface hero summary — replaces LinearGradient */}
+      {/* Compact header */}
       <View style={styles.hero}>
-        <View style={styles.heroBgBlob} />
         <SafeAreaView edges={['top']}>
           <View style={styles.heroRow}>
             <TouchableOpacity onPress={handleBack} style={styles.backButton} hitSlop={8}>
               <ChevronLeft size={22} color={colors.ink} />
             </TouchableOpacity>
-            <Text style={[styles.heroLabel, { flex: 1, textTransform: 'uppercase', letterSpacing: 1 }]}>
-              {period}
-            </Text>
+            <Text style={[styles.heroLabel, { flex: 1 }]}>{period}</Text>
             <TouchableOpacity onPress={handleExportMenu} style={styles.shareButton}>
               <Share2 size={18} color={colors.ink} />
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.heroTitle}>
-            {lang === 'hi' ? 'आपके इनवॉइस, समीक्षित' : 'Your invoices, reviewed'}
-          </Text>
-
-          {/* Breakdown pills */}
-          <View style={styles.pillRow}>
-            <View style={[styles.pill, { backgroundColor: colors.severity.resolvedBg, borderColor: 'rgba(34,197,94,0.3)' }]}>
-              <Text style={[styles.pillCount, { color: colors.severity.resolved }]}>{summary.resolvedCount}</Text>
-              <Text style={[styles.pillText, { color: colors.severity.resolved }]}>{lang === 'hi' ? 'स्वीकार' : 'Accept'}</Text>
-            </View>
-            <View style={[styles.pill, { backgroundColor: colors.severity.pendingBg, borderColor: 'rgba(245,158,11,0.3)' }]}>
-              <Text style={[styles.pillCount, { color: colors.severity.pending }]}>{pendingCount}</Text>
-              <Text style={[styles.pillText, { color: colors.severity.pending }]}>{lang === 'hi' ? 'होल्ड' : 'Hold'}</Text>
-            </View>
-            <View style={[styles.pill, { backgroundColor: colors.severity.blockedBg, borderColor: 'rgba(239,68,68,0.3)' }]}>
-              <Text style={[styles.pillCount, { color: colors.severity.blocked }]}>{blockedCount}</Text>
-              <Text style={[styles.pillText, { color: colors.severity.blocked }]}>{lang === 'hi' ? 'अस्वीकार' : 'Reject'}</Text>
-            </View>
-          </View>
-
-          {/* Filter Tabs */}
+          {/* Filter tabs with counts — serves as both summary and filter */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
             <TouchableOpacity onPress={() => setFilter('all')} style={[styles.filterTab, filter === 'all' && styles.filterTabActive]}>
-              <Text style={[styles.filterTabText, filter === 'all' && styles.filterTabTextActive]}>{lang === 'hi' ? 'सभी' : 'All'}</Text>
+              <Text style={[styles.filterTabText, filter === 'all' && styles.filterTabTextActive]}>
+                {lang === 'hi' ? 'सभी' : 'All'} {results.length}
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setFilter('resolved')} style={[styles.filterTab, filter === 'resolved' && { backgroundColor: colors.ink, borderColor: colors.ink }]}>
-              <Text style={[styles.filterTabText, filter === 'resolved' && { color: colors.surface }]}>{lang === 'hi' ? 'स्वीकार' : 'Accept'}</Text>
-              <Text style={[styles.filterTabCount, filter === 'resolved' && { color: colors.surface }]}>{summary.resolvedCount}</Text>
+            <TouchableOpacity onPress={() => setFilter('blocked')} style={[styles.filterTab, filter === 'blocked' && { backgroundColor: colors.severity.blockedBg, borderColor: colors.severity.blocked }]}>
+              <Text style={[styles.filterTabText, filter === 'blocked' && { color: colors.severity.blocked }]}>
+                {lang === 'hi' ? 'अस्वीकार' : 'Reject'} {blockedCount}
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setFilter('pending')} style={[styles.filterTab, filter === 'pending' && { backgroundColor: colors.ink, borderColor: colors.ink }]}>
-              <Text style={[styles.filterTabText, filter === 'pending' && { color: colors.surface }]}>{lang === 'hi' ? 'होल्ड' : 'Hold'}</Text>
-              <Text style={[styles.filterTabCount, filter === 'pending' && { color: colors.surface }]}>{pendingCount}</Text>
+            <TouchableOpacity onPress={() => setFilter('pending')} style={[styles.filterTab, filter === 'pending' && { backgroundColor: colors.severity.pendingBg, borderColor: colors.severity.pending }]}>
+              <Text style={[styles.filterTabText, filter === 'pending' && { color: colors.severity.pending }]}>
+                {lang === 'hi' ? 'होल्ड' : 'Hold'} {pendingCount}
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setFilter('blocked')} style={[styles.filterTab, filter === 'blocked' && { backgroundColor: colors.ink, borderColor: colors.ink }]}>
-              <Text style={[styles.filterTabText, filter === 'blocked' && { color: colors.surface }]}>{lang === 'hi' ? 'अस्वीकार' : 'Reject'}</Text>
-              <Text style={[styles.filterTabCount, filter === 'blocked' && { color: colors.surface }]}>{blockedCount}</Text>
+            <TouchableOpacity onPress={() => setFilter('resolved')} style={[styles.filterTab, filter === 'resolved' && { backgroundColor: colors.severity.resolvedBg, borderColor: colors.severity.resolved }]}>
+              <Text style={[styles.filterTabText, filter === 'resolved' && { color: colors.severity.resolved }]}>
+                {lang === 'hi' ? 'स्वीकार' : 'Accept'} {summary.resolvedCount}
+              </Text>
             </TouchableOpacity>
           </ScrollView>
         </SafeAreaView>
@@ -683,11 +665,31 @@ export default function DiagnosisScreen() {
           <Text style={styles.newCheckText}>{lang === 'hi' ? 'नई जाँच करें' : 'New Check'}</Text>
         </TouchableOpacity>
 
-        {/* FEATURE-012: Advisory disclaimer — non-negotiable, unconditional */}
+        {/* ITC summary + filing CTA — inline, not sticky */}
+        <View style={styles.inlineSummary}>
+          <View style={styles.inlineSummaryRow}>
+            <View style={[styles.inlineSummaryBox, { backgroundColor: colors.severity.resolvedBg }]}>
+              <Text style={[styles.inlineSummaryLabel, { color: colors.severity.resolved }]}>{lang === 'hi' ? 'सुरक्षित' : 'Safe'}</Text>
+              <Text style={[styles.inlineSummaryValue, { color: colors.severity.resolved }]}>{formatRupee(summary.totalResolved)}</Text>
+            </View>
+            <View style={[styles.inlineSummaryBox, { backgroundColor: colors.severity.blockedBg }]}>
+              <Text style={[styles.inlineSummaryLabel, { color: colors.severity.blocked }]}>{lang === 'hi' ? 'जोखिम' : 'At risk'}</Text>
+              <Text style={[styles.inlineSummaryValue, { color: colors.severity.blocked }]}>{formatRupee(summary.totalBlocked + summary.totalPending)}</Text>
+            </View>
+          </View>
+          <GradientButton
+            label={lang === 'hi' ? 'GST फाइलिंग के लिए आगे बढ़ें' : 'Proceed to GST Filing'}
+            onPress={() => Linking.openURL('https://gst.gov.in')}
+            style={{ width: '100%' }}
+          />
+        </View>
+
         <View style={styles.disclaimerBanner}>
           <AlertTriangle size={14} color={colors.inkMuted} />
           <Text style={styles.disclaimerText}>{t.diagnosis.disclaimer}</Text>
         </View>
+
+        <View style={{ height: spacing.xl }} />
       </ScrollView>
 
       {/* Export picker — works on web and native (unlike Alert.alert on web) */}
@@ -739,26 +741,6 @@ export default function DiagnosisScreen() {
         </View>
       </Modal>
 
-      {/* Sticky Bottom Bar */}
-      <View style={styles.bottomBar}>
-        <View style={styles.bottomBarInner}>
-          <View style={styles.bottomSummaryRow}>
-            <View style={[styles.bottomSummaryBox, { backgroundColor: colors.severity.resolvedBg, borderColor: 'rgba(34,197,94,0.3)' }]}>
-              <Text style={[styles.bottomSummaryLabel, { color: colors.severity.resolved }]}>{lang === 'hi' ? 'सुरक्षित ITC' : 'ITC Safe'}</Text>
-              <Text style={[styles.bottomSummaryValue, { color: colors.severity.resolved }]}>{formatRupee(summary.totalResolved)}</Text>
-            </View>
-            <View style={[styles.bottomSummaryBox, { backgroundColor: colors.severity.pendingBg, borderColor: 'rgba(245,158,11,0.3)' }]}>
-              <Text style={[styles.bottomSummaryLabel, { color: colors.severity.pending }]}>{lang === 'hi' ? 'जोखिम में ITC' : 'ITC at Risk'}</Text>
-              <Text style={[styles.bottomSummaryValue, { color: colors.severity.pending }]}>{formatRupee(summary.totalBlocked + summary.totalPending)}</Text>
-            </View>
-          </View>
-          <GradientButton
-            label={lang === 'hi' ? 'GST फाइलिंग के लिए आगे बढ़ें' : 'Proceed to GST Filing'}
-            onPress={() => Linking.openURL('https://gst.gov.in')}
-            style={{ width: '100%' }}
-          />
-        </View>
-      </View>
     </View>
   );
 }
@@ -816,12 +798,9 @@ const styles = StyleSheet.create({
   hero: {
     backgroundColor: colors.surface,
     paddingHorizontal: spacing.screenH,
-    paddingBottom: spacing.lg,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
+    paddingBottom: spacing.xs,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    ...elevation.card,
   },
   heroRow: {
     flexDirection: 'row',
@@ -872,7 +851,7 @@ const styles = StyleSheet.create({
 
   // List
   list: { flex: 1 },
-  listContent: { padding: spacing.screenH, gap: spacing.md, paddingBottom: spacing.xl },
+  listContent: { padding: spacing.screenH, gap: spacing.md, paddingBottom: spacing.lg },
 
   // Card
   card: {
@@ -1089,7 +1068,6 @@ const styles = StyleSheet.create({
   caVerifyBox: { backgroundColor: colors.surfaceRaised, padding: 10, borderRadius: 6, borderWidth: 1, borderColor: colors.severity.pendingDark },
   caVerifyText: { color: colors.severity.pending, fontSize: 13, fontWeight: '600' },
 
-  heroBgBlob: { position: 'absolute', top: -80, left: -60, width: 240, height: 240, borderRadius: 120, backgroundColor: '#C8DFC4', opacity: 0.35, zIndex: -1 },
   heroTitle: { fontSize: 32, fontWeight: '800', color: colors.ink, marginTop: spacing.md, lineHeight: 38 },
   pillCount: { fontSize: 16, fontWeight: '800' },
   filterRow: { paddingHorizontal: spacing.sm, gap: spacing.sm, paddingTop: spacing.md, paddingBottom: spacing.sm },
@@ -1100,12 +1078,20 @@ const styles = StyleSheet.create({
   filterTabCount: { fontSize: 14, fontWeight: '700', color: colors.inkMuted },
   emptyCard: { padding: spacing.xl, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderRadius: radii.card, borderWidth: 1, borderColor: colors.border },
   emptyCardText: { fontSize: 15, color: colors.inkMuted },
-  bottomBar: { backgroundColor: colors.background, paddingHorizontal: spacing.screenH, paddingTop: spacing.sm, paddingBottom: spacing.lg, position: 'absolute', bottom: 0, left: 0, right: 0 },
-  bottomBarInner: { backgroundColor: colors.surface, borderRadius: radii.card, padding: spacing.md, borderWidth: 1, borderColor: colors.border, ...elevation.card },
-  bottomSummaryRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
-  bottomSummaryBox: { flex: 1, borderRadius: radii.card, padding: spacing.sm, borderWidth: 1 },
-  bottomSummaryLabel: { fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
-  bottomSummaryValue: { fontSize: 16, fontWeight: '800' },
+  inlineSummary: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.card,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.md,
+  },
+  inlineSummaryRow: { flexDirection: 'row', gap: spacing.sm },
+  inlineSummaryBox: {
+    flex: 1, borderRadius: radii.button, padding: spacing.sm, alignItems: 'center',
+  },
+  inlineSummaryLabel: { fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+  inlineSummaryValue: { fontSize: 18, fontWeight: '800', marginTop: 2 },
   cardTonalStripe: { height: 4, width: '100%' },
   actionOverrideRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: spacing.md },
   actionButtonsWrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },
