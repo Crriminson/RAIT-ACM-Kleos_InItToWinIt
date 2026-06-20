@@ -147,7 +147,7 @@ async def gst_doubt(request: Request, body: GstDoubtRequest) -> dict:
     )
     try:
         answer = gemini.generate_text(prompt)
-        return {"success": True, "method": "gemini", "answer": answer}
+        return {"success": True, "method": gemini.last_method(), "answer": answer}
     except Exception as exc:  # noqa: BLE001
         return {
             "success": True,

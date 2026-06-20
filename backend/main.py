@@ -119,8 +119,10 @@ async def _warm_ocr_models() -> None:
 @app.get("/api/health", tags=["meta"])
 async def health_check_alias():
     """Alias for /api/v1/health — the RN app calls /api/health."""
+    from core import local_llm
     return {"status": "ok", "service": "kleos-backend", "version": "1.0.0",
-            "ok": True, "model": gemini.MODEL, "geminiConfigured": gemini.has_key()}
+            "ok": True, "model": gemini.MODEL, "geminiConfigured": gemini.has_key(),
+            "localLlm": local_llm.OLLAMA_MODEL, "localLlmAvailable": local_llm.is_available()}
 
 
 @app.get("/api/v1/health", tags=["meta"])

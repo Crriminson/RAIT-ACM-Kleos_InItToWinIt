@@ -3,20 +3,14 @@ import * as Speech from 'expo-speech';
 /**
  * Text-to-speech ("read aloud") for diagnosis cards.
  *
- * Persona: a low-English-comfort kirana owner. Reading a verdict aloud in
- * Hindi is far more accessible than expecting them to read it.
- *
- * Robustness note: many devices (notably MIUI/Xiaomi) ship without Hindi voice
- * data, so the TTS engine silently plays nothing when asked for `hi-IN`. We
- * therefore enumerate installed voices, pick a real Hindi voice when present,
- * and otherwise fall back to English audio + an `onUnavailable` signal so the
- * UI can prompt the user to install the Hindi voice.
+ * Robustness: many devices lack Hindi or Marathi voice data. We enumerate
+ * installed voices, pick the best match, and fall back through:
+ *   Marathi → Hindi → English (never silently dead).
  */
 
 export interface SpeakHandlers {
   onStart?: () => void;
   onDone?: () => void;
-  /** Fired when the requested language has no installed voice on this device. */
   onUnavailable?: () => void;
 }
 
@@ -38,17 +32,33 @@ async function loadVoices(): Promise<Speech.Voice[]> {
   }
 }
 
-function findVoice(voices: Speech.Voice[], lang: 'hi' | 'en' | 'mr'): Speech.Voice | undefined {
-  const prefix = lang === 'mr' ? 'mr' : lang === 'hi' ? 'hi' : 'en';
+function findVoice(voices: Speech.Voice[], prefix: string): Speech.Voice | undefined {
   return voices.find((v) => (v.language || '').toLowerCase().replace('_', '-').startsWith(prefix));
 }
 
-function doSpeak(text: string, lang: 'hi' | 'en' | 'mr', voiceId: string | undefined, handlers: SpeakHandlers): void {
+function bestVoice(voices: Speech.Voice[], lang: 'hi' | 'en' | 'mr'): { voice: Speech.Voice | undefined; ttsLang: string } {
+  if (lang === 'mr') {
+    const mr = findVoice(voices, 'mr');
+    if (mr) return { voice: mr, ttsLang: 'mr-IN' };
+    // Marathi voice missing — use Hindi (same script, very similar pronunciation)
+    const hi = findVoice(voices, 'hi');
+    if (hi) return { voice: hi, ttsLang: 'hi-IN' };
+    return { voice: findVoice(voices, 'en'), ttsLang: 'en-IN' };
+  }
+  if (lang === 'hi') {
+    const hi = findVoice(voices, 'hi');
+    if (hi) return { voice: hi, ttsLang: 'hi-IN' };
+    return { voice: findVoice(voices, 'en'), ttsLang: 'en-IN' };
+  }
+  return { voice: findVoice(voices, 'en'), ttsLang: 'en-IN' };
+}
+
+function doSpeak(text: string, ttsLang: string, voiceId: string | undefined, handlers: SpeakHandlers): void {
   handlers.onStart?.();
   Speech.speak(text, {
-    language: lang === 'mr' ? 'mr-IN' : lang === 'hi' ? 'hi-IN' : 'en-IN',
+    language: ttsLang,
     voice: voiceId,
-    rate: lang === 'en' ? 0.96 : 0.92,
+    rate: ttsLang.startsWith('en') ? 0.96 : 0.92,
     pitch: 1.0,
     onDone: handlers.onDone,
     onStopped: handlers.onDone,
@@ -56,11 +66,6 @@ function doSpeak(text: string, lang: 'hi' | 'en' | 'mr', voiceId: string | undef
   });
 }
 
-/**
- * Speak `text` in `lang`. If `lang` has no installed voice, fire
- * `handlers.onUnavailable` and (if provided) read `fallback` instead so the
- * button is never silently dead.
- */
 export async function speak(
   text: string,
   lang: 'hi' | 'en' | 'mr',
@@ -70,24 +75,32 @@ export async function speak(
   Speech.stop();
   const voices = await loadVoices();
   const haveList = voices.length > 0;
-  const primaryVoice = findVoice(voices, lang);
+  const { voice, ttsLang } = bestVoice(voices, lang);
 
-  // Only treat as "unavailable" when we successfully enumerated voices and the
-  // requested language is genuinely absent. If we couldn't enumerate, just try.
-  if (haveList && !primaryVoice && lang === 'hi') {
-    handlers.onUnavailable?.();
-    if (fallback) {
-      doSpeak(fallback.text, fallback.lang, findVoice(voices, fallback.lang)?.identifier, handlers);
-    } else {
+  // If the exact language voice is missing, signal it but still speak via fallback voice.
+  if (haveList && lang !== 'en') {
+    const exactPrefix = lang === 'mr' ? 'mr' : 'hi';
+    const hasExact = findVoice(voices, exactPrefix) !== undefined;
+    if (!hasExact) {
+      handlers.onUnavailable?.();
+      if (fallback) {
+        const fb = bestVoice(voices, fallback.lang);
+        doSpeak(fallback.text, fb.ttsLang, fb.voice?.identifier, handlers);
+        return;
+      }
+      // Still try with whatever voice we found (Hindi for Marathi, English for Hindi)
+      if (voice) {
+        doSpeak(text, ttsLang, voice.identifier, handlers);
+        return;
+      }
       handlers.onDone?.();
+      return;
     }
-    return;
   }
 
-  doSpeak(text, lang, primaryVoice?.identifier, handlers);
+  doSpeak(text, ttsLang, voice?.identifier, handlers);
 }
 
-/** Stop any current speech. */
 export function stopSpeaking(): void {
   Speech.stop();
 }

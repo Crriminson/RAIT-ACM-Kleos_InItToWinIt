@@ -31,6 +31,7 @@ import {
   Zap,
   ScanSearch,
   TrendingUp,
+  MessageCircle,
 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -273,6 +274,26 @@ export default function UploadScreen() {
                 <ArrowRight size={16} color={colors.inkMuted} />
               </TouchableOpacity>
             )}
+
+            {/* WhatsApp bot entry */}
+            <TouchableOpacity
+              style={styles.whatsappEntry}
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate('WhatsAppDemo')}
+            >
+              <View style={styles.whatsappIconWrap}>
+                <MessageCircle size={18} color="#FFFFFF" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.whatsappTitle}>
+                  {lang === 'hi' ? 'WhatsApp से invoice भेजें' : lang === 'mr' ? 'WhatsApp वरून invoice पाठवा' : 'Send invoice via WhatsApp'}
+                </Text>
+                <Text style={styles.whatsappSub}>
+                  {lang === 'hi' ? 'फोटो भेजो, तुरंत ITC जाँच पाओ' : lang === 'mr' ? 'फोटो पाठवा, लगेच ITC तपासणी मिळवा' : 'Send a photo, get instant ITC check'}
+                </Text>
+              </View>
+              <ArrowRight size={16} color="#25D366" />
+            </TouchableOpacity>
 
             {/* Progress tracker */}
             <View style={styles.progressTracker}>
@@ -759,6 +780,38 @@ const styles = StyleSheet.create({
     color: colors.inkSecondary,
     fontSize: 14,
     flex: 1,
+  },
+
+  // WhatsApp entry
+  whatsappEntry: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radii.card,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: '#25D366',
+  },
+  whatsappIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#25D366',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  whatsappTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.ink,
+  },
+  whatsappSub: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: colors.inkMuted,
+    marginTop: 1,
   },
 
   // Demo button

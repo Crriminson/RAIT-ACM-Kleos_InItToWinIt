@@ -1,263 +1,641 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CA in Your Pocket — Understand your GST, recover your ITC</title>
-    <meta name="description"
-        content="An AI tool that reads your invoices and GSTR-2B, finds every blocked Input Tax Credit, and tells you exactly what to do — in plain Hindi. Built for India's 1.4 crore MSMEs." />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap"
-        rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CA in Your Pocket — Understand your GST, recover your ITC</title>
+  <meta name="description" content="An AI tool that reads your invoices and GSTR-2B, finds every blocked Input Tax Credit, and tells you exactly what to do — in plain Hindi, English, or Marathi."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --primary: #E8432A;
+      --primary-dark: #C93820;
+      --bg: #FAF6EE;
+      --surface: #FDF9F3;
+      --ink: #221E1A;
+      --ink2: #4A3F35;
+      --muted: #7A6E63;
+      --border: #E2D9CC;
+      --accent-muted: #EDE7DA;
+      --blocked: #7A2419;
+      --blocked-bg: #F5E2DC;
+      --pending: #6B4020;
+      --pending-bg: #F5EBD8;
+      --resolved: #2A5C32;
+      --resolved-bg: #E3EFDF;
+      --radius: 16px;
+      --radius-sm: 12px;
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── Nav ──────────────────────────────────────────────── */
+    .nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(250,246,238,0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      height: 64px;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .brand-mark {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: var(--primary); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 18px;
+    }
+    .brand-name { font-weight: 700; font-size: 16px; color: var(--ink); }
+    .nav-links { display: flex; gap: 32px; }
+    .nav-links a {
+      text-decoration: none; color: var(--muted); font-size: 14px; font-weight: 500;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--ink); }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 10px 22px; border-radius: 9999px; font-weight: 600; font-size: 14px;
+      text-decoration: none; border: none; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-primary {
+      background: var(--primary); color: #fff;
+      box-shadow: 0 4px 16px rgba(232,67,42,0.28);
+    }
+    .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
+    .btn-ghost {
+      background: transparent; color: var(--ink); border: 1.5px solid var(--border);
+    }
+    .btn-ghost:hover { border-color: var(--ink); }
+    .btn-light { background: #fff; color: var(--primary); font-weight: 700; }
+    .btn-light:hover { background: #f5f5f5; }
+    .btn-ghost-light { background: transparent; color: rgba(255,255,255,0.9); border: 1.5px solid rgba(255,255,255,0.3); }
+    .btn-sm { padding: 8px 18px; font-size: 13px; }
+
+    /* ── Hero ─────────────────────────────────────────────── */
+    .hero {
+      padding: 140px 0 80px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; top: -120px; right: -80px;
+      width: 500px; height: 500px; border-radius: 50%;
+      background: rgba(200,223,196,0.4);
+      z-index: 0;
+    }
+    .hero-grid {
+      display: grid; grid-template-columns: 1fr 420px; gap: 60px; align-items: center;
+      position: relative; z-index: 1;
+    }
+    .eyebrow {
+      font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--primary); margin-bottom: 16px;
+    }
+    .hero-title {
+      font-size: 48px; font-weight: 900; line-height: 1.1; letter-spacing: -1px;
+      margin-bottom: 20px;
+    }
+    .rupee-strike { color: var(--blocked); }
+    .accent { color: var(--primary); }
+    .hero-sub {
+      font-size: 17px; line-height: 1.7; color: var(--ink2); margin-bottom: 32px;
+      max-width: 520px;
+    }
+    .hero-cta { display: flex; gap: 12px; margin-bottom: 48px; flex-wrap: wrap; }
+    .hero-stats { display: flex; gap: 40px; }
+    .stat-num { font-size: 24px; font-weight: 800; color: var(--ink); }
+    .stat-label { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+    /* Phone mockup */
+    .hero-phone { position: relative; }
+    .phone {
+      width: 320px; margin: 0 auto;
+      background: var(--surface);
+      border-radius: 36px;
+      border: 3px solid var(--border);
+      padding: 16px 12px 24px;
+      box-shadow: 0 24px 80px rgba(34,30,26,0.12);
+      position: relative; z-index: 1;
+    }
+    .phone-notch {
+      width: 100px; height: 6px; border-radius: 3px;
+      background: var(--border); margin: 0 auto 16px;
+    }
+    .phone-screen { overflow: hidden; border-radius: 20px; }
+    .app-summary {
+      padding: 20px 16px; border-radius: var(--radius-sm); margin-bottom: 12px;
+    }
+    .app-summary.blocked { background: var(--blocked-bg); border: 1px solid rgba(122,36,25,0.15); }
+    .app-summary-amount { font-size: 28px; font-weight: 800; color: var(--blocked); }
+    .app-summary-meta { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .app-cards { display: flex; flex-direction: column; gap: 8px; }
+    .dcard {
+      padding: 14px 16px; border-radius: var(--radius-sm);
+      border-left: 4px solid; background: var(--surface);
+      border: 1px solid var(--border);
+    }
+    .dcard.blocked { border-left-color: var(--blocked); }
+    .dcard.pending { border-left-color: var(--pending); }
+    .dcard.resolved { border-left-color: var(--resolved); }
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 20px;
+      font-size: 10px; font-weight: 700;
+    }
+    .badge-blocked { background: var(--blocked-bg); color: var(--blocked); }
+    .badge-pending { background: var(--pending-bg); color: var(--pending); }
+    .badge-resolved { background: var(--resolved-bg); color: var(--resolved); }
+    .dcard-amount { font-size: 22px; font-weight: 800; margin: 6px 0 4px; color: var(--ink); }
+    .dcard-reason { font-size: 12px; color: var(--ink2); font-family: 'Noto Sans Devanagari', sans-serif; }
+    .dcard-action { font-size: 11px; color: var(--muted); margin-top: 4px; font-family: 'Noto Sans Devanagari', sans-serif; }
+    .phone-glow {
+      position: absolute; bottom: -40px; left: 50%; transform: translateX(-50%);
+      width: 280px; height: 120px; border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(232,67,42,0.12), transparent 70%);
+      z-index: 0;
+    }
+
+    /* ── Sections ─────────────────────────────────────────── */
+    .section { padding: 100px 0; }
+    .section-head { text-align: center; max-width: 640px; margin: 0 auto 56px; }
+    .section-tag {
+      font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--primary); margin-bottom: 12px;
+    }
+    .section-head h2 {
+      font-size: 36px; font-weight: 800; line-height: 1.2; letter-spacing: -0.5px;
+    }
+
+    /* Problem */
+    .problem { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .problem-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    .problem-card {
+      background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 32px 24px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .problem-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(34,30,26,0.08); }
+    .problem-icon { font-size: 32px; margin-bottom: 16px; }
+    .problem-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .problem-card p { font-size: 14px; color: var(--ink2); line-height: 1.6; }
+
+    /* Steps */
+    .steps {
+      display: flex; align-items: flex-start; justify-content: center; gap: 0;
+    }
+    .step {
+      flex: 1; text-align: center; padding: 0 24px;
+      position: relative;
+    }
+    .step-num {
+      width: 48px; height: 48px; border-radius: 50%;
+      background: var(--primary); color: #fff;
+      font-size: 20px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+      box-shadow: 0 4px 16px rgba(232,67,42,0.28);
+    }
+    .step h3 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+    .step p { font-size: 14px; color: var(--ink2); line-height: 1.6; }
+    .step-arrow {
+      font-size: 28px; color: var(--border); padding-top: 10px; font-weight: 300;
+    }
+
+    /* Features */
+    .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .feature {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 28px 24px;
+      position: relative; overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .feature:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(34,30,26,0.08); }
+    .feature-bar {
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+    }
+    .feature h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+    .feature p { font-size: 14px; color: var(--ink2); line-height: 1.6; }
+
+    /* Tech stack */
+    .tech { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .tech-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+    .tech-card {
+      text-align: center; padding: 32px 16px;
+      background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius);
+    }
+    .tech-icon { font-size: 36px; margin-bottom: 12px; }
+    .tech-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .tech-card p { font-size: 12px; color: var(--muted); }
+
+    /* Security */
+    .security-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .sec-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 20px; display: flex; gap: 12px; align-items: flex-start;
+    }
+    .sec-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: var(--resolved-bg); color: var(--resolved);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .sec-card h4 { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+    .sec-card p { font-size: 12px; color: var(--muted); }
+
+    /* CTA */
+    .cta-section {
+      padding: 80px 0;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      position: relative; overflow: hidden;
+    }
+    .cta-section::before {
+      content: '';
+      position: absolute; top: -60px; right: -60px;
+      width: 300px; height: 300px; border-radius: 50%;
+      background: rgba(255,255,255,0.06);
+    }
+    .cta-inner {
+      text-align: center; position: relative; z-index: 1;
+    }
+    .cta-inner h2 { font-size: 36px; font-weight: 800; color: #fff; margin-bottom: 12px; }
+    .cta-inner p { font-size: 16px; color: rgba(255,255,255,0.85); margin-bottom: 32px; max-width: 500px; margin-left: auto; margin-right: auto; }
+    .cta-buttons { display: flex; justify-content: center; gap: 12px; margin-bottom: 20px; }
+    .cta-note { font-size: 12px; color: rgba(255,255,255,0.5); }
+
+    /* Footer */
+    .footer {
+      padding: 32px 0;
+      border-top: 1px solid var(--border);
+    }
+    .footer-inner {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .footer-brand { display: flex; align-items: center; gap: 10px; }
+    .footer-meta { font-size: 12px; color: var(--muted); text-align: right; line-height: 1.5; }
+
+    /* ── Responsive ──────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .hero-grid { grid-template-columns: 1fr; text-align: center; }
+      .hero-phone { display: none; }
+      .hero-sub { margin-left: auto; margin-right: auto; }
+      .hero-cta { justify-content: center; }
+      .hero-stats { justify-content: center; }
+      .hero-title { font-size: 36px; }
+      .problem-grid, .feature-grid, .security-grid { grid-template-columns: 1fr; }
+      .tech-grid { grid-template-columns: repeat(2, 1fr); }
+      .steps { flex-direction: column; align-items: center; }
+      .step-arrow { transform: rotate(90deg); padding: 8px 0; }
+      .nav-links { display: none; }
+      .footer-inner { flex-direction: column; gap: 12px; text-align: center; }
+      .footer-meta { text-align: center; }
+    }
+  </style>
 </head>
-
 <body>
-    <!-- Nav -->
-    <header class="nav">
-        <div class="container nav-inner">
-            <a class="brand" href="#top">
-                <span class="brand-mark">₹</span>
-                <span class="brand-name">CA in Your Pocket</span>
-            </a>
-            <nav class="nav-links">
-                <a href="#problem">The Problem</a>
-                <a href="#how">How it works</a>
-                <a href="#features">Features</a>
-            </nav>
-            <a href="#try" class="btn btn-primary btn-sm">Try the app</a>
+
+<!-- Nav -->
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="#top">
+      <span class="brand-mark">&#8377;</span>
+      <span class="brand-name">CA in Your Pocket</span>
+    </a>
+    <nav class="nav-links">
+      <a href="#problem">The Problem</a>
+      <a href="#how">How it works</a>
+      <a href="#features">Features</a>
+      <a href="#tech">Tech</a>
+    </nav>
+    <a href="#try" class="btn btn-primary btn-sm">Try the app</a>
+  </div>
+</header>
+
+<!-- Hero -->
+<section class="hero" id="top">
+  <div class="container hero-grid">
+    <div class="hero-copy">
+      <div class="eyebrow">KLEOS 2026 &middot; AI / ML &middot; D4-PS1</div>
+      <h1 class="hero-title">
+        <span class="rupee-strike">&#8377;8,700 blocked.</span><br/>
+        You don't know why.<br/>
+        <span class="accent">Your CA does.</span>
+      </h1>
+      <p class="hero-sub">
+        Every month, small traders lose Input Tax Credit they're legally owed &mdash;
+        because the GST portal never says what's wrong. We built the diagnostic tool
+        that does: it reads your invoices, matches them against GSTR-2B, and explains
+        every gap in plain Hindi, English, or Marathi &mdash; with the exact action to take.
+      </p>
+      <div class="hero-cta">
+        <a href="#try" class="btn btn-primary">See it in action</a>
+        <a href="#how" class="btn btn-ghost">How it works</a>
+      </div>
+      <div class="hero-stats">
+        <div class="stat">
+          <div class="stat-num">1.4 crore</div>
+          <div class="stat-label">GST-registered MSMEs</div>
         </div>
-    </header>
-
-    <!-- Hero -->
-    <section class="hero" id="top">
-        <div class="container hero-grid">
-            <div class="hero-copy">
-                <div class="eyebrow">KLEOS 2026 · AI / ML · D4-PS1</div>
-                <h1 class="hero-title">
-                    <span class="rupee-strike">₹2,400 blocked.</span><br />
-                    You don't know why.<br />
-                    <span class="accent">Your CA does.</span>
-                </h1>
-                <p class="hero-sub">
-                    Every month, small traders lose Input Tax Credit they are legally owed —
-                    because the GST portal never tells them what's wrong. We built the
-                    diagnostic tool that does: it reads your invoices, matches them against
-                    your GSTR-2B, and explains every gap in plain Hindi, with the exact action to take.
-                </p>
-                <div class="hero-cta">
-                    <a href="#try" class="btn btn-primary">See it in action</a>
-                    <a href="#how" class="btn btn-ghost">How it works</a>
-                </div>
-                <div class="hero-stats">
-                    <div class="stat">
-                        <div class="stat-num">1.4 crore</div>
-                        <div class="stat-label">GST-registered MSMEs in India</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-num">₹15k–40k</div>
-                        <div class="stat-label">paid to a CA every month</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-num">500–2,000</div>
-                        <div class="stat-label">invoices a month, by hand</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Phone mockup: Diagnosis screen (S4) -->
-            <div class="hero-phone">
-                <div class="phone">
-                    <div class="phone-notch"></div>
-                    <div class="phone-screen">
-                        <div class="app-summary blocked">
-                            <div class="app-summary-amount">₹5,820 अटकी है</div>
-                            <div class="app-summary-meta">3 समस्याएं · 3 सही match</div>
-                        </div>
-                        <div class="app-cards">
-                            <div class="dcard blocked">
-                                <span class="badge badge-blocked">● ITC blocked</span>
-                                <div class="dcard-amount">₹2,700</div>
-                                <div class="dcard-reason">Sharma Supplies ने यह invoice अभी तक file नहीं की।</div>
-                                <div class="dcard-action">Sharma Supplies से कहें कि 14 तारीख से पहले file करें।</div>
-                            </div>
-                            <div class="dcard blocked">
-                                <span class="badge badge-blocked">● ITC blocked</span>
-                                <div class="dcard-amount">₹2,400</div>
-                                <div class="dcard-reason">Ramesh Traders ने गलत HSN कोड लगाया है (1006 → 1905)।</div>
-                                <div class="dcard-action">Ramesh Traders को बोलें कि HSN सही करें।</div>
-                            </div>
-                            <div class="dcard pending">
-                                <span class="badge badge-pending">● Follow-up</span>
-                                <div class="dcard-amount">₹720</div>
-                                <div class="dcard-reason">Tax rate mismatch — invoice 18%, GSTR-2B 12%।</div>
-                            </div>
-                            <div class="dcard resolved">
-                                <span class="badge badge-resolved">● Matched</span>
-                                <div class="dcard-amount">₹1,600</div>
-                                <div class="dcard-reason">Patel Brothers की invoice सही match हो गई।</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="phone-glow"></div>
-            </div>
+        <div class="stat">
+          <div class="stat-num">&#8377;15k&ndash;40k</div>
+          <div class="stat-label">monthly CA fees</div>
         </div>
-    </section>
-
-    <!-- Problem -->
-    <section class="section problem" id="problem">
-        <div class="container">
-            <div class="section-head">
-                <div class="section-tag">The unstructured data paradox</div>
-                <h2>A real business is messy. GST is rigid. Nobody bridges the gap.</h2>
-            </div>
-            <div class="problem-grid">
-                <div class="problem-card">
-                    <div class="problem-icon">📥</div>
-                    <h3>Invoices arrive everywhere</h3>
-                    <p>WhatsApp photos, printed bills, thermal receipts, scanned PDFs — scattered across 30 days and
-                        dozens of supplier chats.</p>
-                </div>
-                <div class="problem-card">
-                    <div class="problem-icon">🕳️</div>
-                    <h3>GSTR-2B can't see its own gaps</h3>
-                    <p>If a supplier never files, the entry simply doesn't exist. The portal has no way to flag what's
-                        missing — only the trader's own invoices can.</p>
-                </div>
-                <div class="problem-card">
-                    <div class="problem-icon">🔒</div>
-                    <h3>The portal won't explain</h3>
-                    <p>It's English-only, built for filing, not diagnosis. It never says <em>why</em> ₹2,400 is stuck or
-                        what to do about it.</p>
-                </div>
-            </div>
+        <div class="stat">
+          <div class="stat-num">3 languages</div>
+          <div class="stat-label">Hindi, English, Marathi</div>
         </div>
-    </section>
+      </div>
+    </div>
 
-    <!-- How it works -->
-    <section class="section how" id="how">
-        <div class="container">
-            <div class="section-head">
-                <div class="section-tag">One monthly check</div>
-                <h2>Upload once. Get answers in plain Hindi.</h2>
+    <div class="hero-phone">
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="app-summary blocked">
+            <div class="app-summary-amount">&#8377;8,700 &#2309;&#2335;&#2325;&#2368; &#2361;&#2376;</div>
+            <div class="app-summary-meta">3 blocked &middot; 1 pending &middot; 4 resolved</div>
+          </div>
+          <div class="app-cards">
+            <div class="dcard blocked">
+              <span class="badge badge-blocked">&bull; ITC blocked</span>
+              <div class="dcard-amount">&#8377;3,600</div>
+              <div class="dcard-reason">Delhi Spice Co. &mdash; Place of Supply mismatch (09-UP vs 07-Delhi)</div>
             </div>
-            <div class="steps">
-                <div class="step">
-                    <div class="step-num">1</div>
-                    <h3>Upload</h3>
-                    <p>Drop in your GSTR-2B export and a batch of invoices — pick from files or snap printed bills with
-                        the camera. One action, like handing a pile to your CA.</p>
-                </div>
-                <div class="step-arrow">→</div>
-                <div class="step">
-                    <div class="step-num">2</div>
-                    <h3>Diagnose</h3>
-                    <p>A multimodal model reads each invoice, matches it to GSTR-2B at line-item and HSN level, and
-                        quantifies every blocked or at-risk rupee.</p>
-                </div>
-                <div class="step-arrow">→</div>
-                <div class="step">
-                    <div class="step-num">3</div>
-                    <h3>Act</h3>
-                    <p>Each issue becomes a card: the amount, the reason, the exact action — plus a ready-to-send
-                        WhatsApp message for the supplier. No CA needed.</p>
-                </div>
+            <div class="dcard blocked">
+              <span class="badge badge-blocked">&bull; ITC blocked</span>
+              <div class="dcard-amount">&#8377;2,700</div>
+              <div class="dcard-reason">Sharma Supplies &#2344;&#2375; &#2351;&#2361; invoice &#2309;&#2349;&#2368; &#2340;&#2325; file &#2344;&#2361;&#2368;&#2306; &#2325;&#2368;</div>
             </div>
+            <div class="dcard pending">
+              <span class="badge badge-pending">&bull; Follow-up</span>
+              <div class="dcard-amount">&#8377;720</div>
+              <div class="dcard-reason">Gupta Electronics &mdash; rate 18% vs 12%</div>
+            </div>
+            <div class="dcard resolved">
+              <span class="badge badge-resolved">&bull; Matched</span>
+              <div class="dcard-amount">&#8377;1,800</div>
+              <div class="dcard-reason">Royal Restaurant &mdash; &#9888; S.17(5) blocked credit flag</div>
+            </div>
+          </div>
         </div>
-    </section>
+      </div>
+      <div class="phone-glow"></div>
+    </div>
+  </div>
+</section>
 
-    <!-- Features -->
-    <section class="section features" id="features">
-        <div class="container">
-            <div class="section-head">
-                <div class="section-tag">What's inside</div>
-                <h2>Built around one test: can a kirana owner act on this alone?</h2>
-            </div>
-            <div class="feature-grid">
-                <div class="feature">
-                    <div class="feature-bar"></div>
-                    <h3>Missing-transaction detection</h3>
-                    <p>Diffs your invoices against GSTR-2B to catch suppliers who never filed — the loss the portal
-                        can't show you.</p>
-                </div>
-                <div class="feature">
-                    <div class="feature-bar"></div>
-                    <h3>HSN &amp; rate mismatch</h3>
-                    <p>Line-item matching surfaces the wrong-HSN and wrong-rate cases that quietly block your credit.
-                    </p>
-                </div>
-                <div class="feature">
-                    <div class="feature-bar"></div>
-                    <h3>Plain-language, ₹-first</h3>
-                    <p>Every issue ranked by rupees lost, explained in Class-10 Hindi — no jargon, no professional
-                        interpretation.</p>
-                </div>
-                <div class="feature">
-                    <div class="feature-bar"></div>
-                    <h3>One-tap supplier message</h3>
-                    <p>Copies a polite, ready-to-forward WhatsApp note so the trader can chase a fix without knowing
-                        what GSTR-2B even is.</p>
-                </div>
-                <div class="feature">
-                    <div class="feature-bar"></div>
-                    <h3>Audit trail you can trust</h3>
-                    <p>Tap any issue to see your invoice side-by-side with GSTR-2B, with the exact mismatched field
-                        highlighted.</p>
-                </div>
-                <div class="feature">
-                    <div class="feature-bar"></div>
-                    <h3>Hindi-first, English-ready</h3>
-                    <p>The whole interface flips between Hindi and English instantly — built for limited-English
-                        comfort.</p>
-                </div>
-            </div>
+<!-- Problem -->
+<section class="section problem" id="problem">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-tag">The unstructured data paradox</div>
+      <h2>A real business is messy. GST is rigid. Nobody bridges the gap.</h2>
+    </div>
+    <div class="problem-grid">
+      <div class="problem-card">
+        <div class="problem-icon">&#128229;</div>
+        <h3>Invoices arrive everywhere</h3>
+        <p>WhatsApp photos, printed bills, thermal receipts, scanned PDFs &mdash; scattered across 30 days and dozens of supplier chats.</p>
+      </div>
+      <div class="problem-card">
+        <div class="problem-icon">&#128371;&#65039;</div>
+        <h3>GSTR-2B can't see its own gaps</h3>
+        <p>If a supplier never files, the entry simply doesn't exist. The portal has no way to flag what's missing &mdash; only the trader's own invoices can.</p>
+      </div>
+      <div class="problem-card">
+        <div class="problem-icon">&#128274;</div>
+        <h3>The portal won't explain</h3>
+        <p>It's English-only, built for filing, not diagnosis. It never says <em>why</em> &#8377;2,400 is stuck or what to do about it.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How it works -->
+<section class="section how" id="how">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-tag">One monthly check</div>
+      <h2>Upload once. Get answers in your language.</h2>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Upload</h3>
+        <p>Drop your GSTR-2B CSV and a batch of invoices &mdash; files, camera, or WhatsApp images. One action, like handing a pile to your CA.</p>
+      </div>
+      <div class="step-arrow">&rarr;</div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>Diagnose</h3>
+        <p>AI reads each invoice (OCR + Gemini), matches it to GSTR-2B at line-item and HSN level, and quantifies every blocked rupee.</p>
+      </div>
+      <div class="step-arrow">&rarr;</div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Act</h3>
+        <p>Each issue becomes a card: the amount, the reason, the IMS action &mdash; plus a ready-to-send WhatsApp message for the supplier.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="section features" id="features">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-tag">What's inside</div>
+      <h2>Built around one test: can a kirana owner act on this alone?</h2>
+    </div>
+    <div class="feature-grid">
+      <div class="feature">
+        <div class="feature-bar"></div>
+        <h3>Missing-transaction detection</h3>
+        <p>Diffs your invoices against GSTR-2B to catch suppliers who never filed &mdash; the loss the portal can't show you.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-bar"></div>
+        <h3>HSN, rate &amp; PoS mismatch</h3>
+        <p>Line-item matching surfaces wrong HSN codes, tax rate differences, and Place of Supply errors that quietly block credit.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-bar"></div>
+        <h3>Section 17(5) blocked credit</h3>
+        <p>Flags invoices for catering, vehicles, or club memberships where ITC is blocked by law &mdash; before you try to claim it.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-bar"></div>
+        <h3>WhatsApp bot</h3>
+        <p>Forward an invoice photo to the bot, get an instant ITC verdict. Built on Meta's Cloud API with webhook signature verification.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-bar"></div>
+        <h3>Ask a CA &mdash; AI chat</h3>
+        <p>Type any GST question in Hindi, English, or Marathi. Powered by Gemini with a local Qwen3 4B fallback that works offline.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-bar"></div>
+        <h3>3 languages via Sarvam AI</h3>
+        <p>Full UI in Hindi, English, and Marathi. Speech-to-text input and real-time translation for AI responses &mdash; powered by Sarvam.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-bar"></div>
+        <h3>IMS walkthrough</h3>
+        <p>Step-by-step guide to Accept, Reject, or Hold on the GST portal. The app recommends &mdash; you file. Never automatic.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-bar"></div>
+        <h3>One-tap supplier message</h3>
+        <p>Generates a polite WhatsApp message to the supplier with the exact issue and fix needed. Hindi and English.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-bar"></div>
+        <h3>Export &amp; share</h3>
+        <p>Download reconciliation reports as CSV, PDF, or share as text. Works on web and native &mdash; cross-platform export.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Tech stack -->
+<section class="section tech" id="tech">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-tag">Under the hood</div>
+      <h2>The stack that makes it work</h2>
+    </div>
+    <div class="tech-grid">
+      <div class="tech-card">
+        <div class="tech-icon">&#9883;</div>
+        <h3>React Native (Expo)</h3>
+        <p>Cross-platform app &mdash; Android, iOS, Web</p>
+      </div>
+      <div class="tech-card">
+        <div class="tech-icon">&#9889;</div>
+        <h3>FastAPI + Python</h3>
+        <p>OCR &rarr; Extract &rarr; Match &rarr; Recommend pipeline</p>
+      </div>
+      <div class="tech-card">
+        <div class="tech-icon">&#129302;</div>
+        <h3>Gemini + Qwen3 4B</h3>
+        <p>Cloud AI primary, local LLM offline fallback</p>
+      </div>
+      <div class="tech-card">
+        <div class="tech-icon">&#127911;</div>
+        <h3>Sarvam AI</h3>
+        <p>Hindi/Marathi STT + translation</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Security -->
+<section class="section" id="security">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-tag">Guardrails</div>
+      <h2>Security controls, not afterthoughts</h2>
+    </div>
+    <div class="security-grid">
+      <div class="sec-card">
+        <div class="sec-icon">&#128274;</div>
+        <div>
+          <h4>API key auth</h4>
+          <p>Every endpoint authenticated via X-API-Key header</p>
         </div>
-    </section>
-
-    <!-- CTA -->
-    <section class="cta" id="try">
-        <div class="container cta-inner">
-            <h2>See the diagnosis for yourself.</h2>
-            <p>Open the prototype, tap <strong>"Demo data से देखें"</strong>, and watch it find ₹5,820 in blocked ITC
-                across a realistic month of invoices.</p>
-            <div class="cta-buttons">
-                <a href="#" class="btn btn-light" id="open-app">Open the app</a>
-                <a href="#how" class="btn btn-ghost-light">See how it works</a>
-            </div>
-            <p class="cta-note">Prototype runs on a team-designed mock dataset per the PS Simulation Clause.</p>
+      </div>
+      <div class="sec-card">
+        <div class="sec-icon">&#128737;</div>
+        <div>
+          <h4>CORS allowlist</h4>
+          <p>Restricted origins, not allow_origins=["*"]</p>
         </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container footer-inner">
-            <div class="footer-brand">
-                <span class="brand-mark">₹</span>
-                <span class="brand-name">CA in Your Pocket</span>
-            </div>
-            <div class="footer-meta">
-                KLEOS 2026 · Domain 04 (AI/ML) · Problem Statement D4-PS1<br />
-                "The CA in Your Pocket That Does Not Exist"
-            </div>
+      </div>
+      <div class="sec-card">
+        <div class="sec-icon">&#9989;</div>
+        <div>
+          <h4>Webhook HMAC</h4>
+          <p>SHA-256 signature verification on every webhook</p>
         </div>
-    </footer>
+      </div>
+      <div class="sec-card">
+        <div class="sec-icon">&#128200;</div>
+        <div>
+          <h4>Rate limiting</h4>
+          <p>Per-IP limits on paid API paths (slowapi)</p>
+        </div>
+      </div>
+      <div class="sec-card">
+        <div class="sec-icon">&#128230;</div>
+        <div>
+          <h4>10 MB upload cap</h4>
+          <p>Reject oversized files before they hit OCR</p>
+        </div>
+      </div>
+      <div class="sec-card">
+        <div class="sec-icon">&#128272;</div>
+        <div>
+          <h4>No secrets in git</h4>
+          <p>All credentials via env vars, .env in .gitignore</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-    <script>
-        // Smooth-scroll for in-page links
-        document.querySelectorAll('a[href^="#"]').forEach((a) => {
-            a.addEventListener('click', (e) => {
-                const id = a.getAttribute('href');
-                if (id && id.length > 1) {
-                    const el = document.querySelector(id);
-                    if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth' }); }
-                }
-            });
-        });
-    </script>
+<!-- CTA -->
+<section class="cta-section" id="try">
+  <div class="container cta-inner">
+    <h2>See the diagnosis for yourself.</h2>
+    <p>Open the prototype, tap <strong>"Demo data se dekhen"</strong>, and watch it find &#8377;8,700 in blocked ITC across 8 realistic invoices.</p>
+    <div class="cta-buttons">
+      <a href="#" class="btn btn-light" id="open-app">Open the app</a>
+      <a href="#how" class="btn btn-ghost-light">How it works</a>
+    </div>
+    <p class="cta-note">Prototype runs on team-designed mock dataset per the PS Simulation Clause. Recommendation only &mdash; never auto-files.</p>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+  <div class="container footer-inner">
+    <div class="footer-brand">
+      <span class="brand-mark">&#8377;</span>
+      <span class="brand-name">CA in Your Pocket</span>
+    </div>
+    <div class="footer-meta">
+      KLEOS 2026 &middot; Domain 04 (AI/ML) &middot; Problem Statement D4-PS1<br/>
+      "The CA in Your Pocket That Does Not Exist"
+    </div>
+  </div>
+</footer>
+
+<script>
+  document.querySelectorAll('a[href^="#"]').forEach((a) => {
+    a.addEventListener('click', (e) => {
+      const id = a.getAttribute('href');
+      if (id && id.length > 1) {
+        const el = document.querySelector(id);
+        if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth' }); }
+      }
+    });
+  });
+</script>
 </body>
-
 </html>

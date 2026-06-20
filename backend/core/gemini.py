@@ -30,6 +30,7 @@ MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
 _PLACEHOLDER = "YOUR_GEMINI_API_KEY"
 _client = None  # lazily created google.genai.Client
+_last_method = "fallback"  # tracks which backend answered last
 
 
 def _api_key() -> str:
@@ -95,22 +96,51 @@ def _strip_fences(text: str) -> str:
     return text.replace("```json", "").replace("```", "").strip()
 
 
+def last_method() -> str:
+    """Return which backend answered the last generate call."""
+    return _last_method
+
+
 def generate_text(prompt: str) -> str:
-    """Plain-text generation. Raises on empty output or API error."""
-    resp = _generate(prompt, json_mode=False)
-    text = (resp.text or "").strip()
-    if not text:
-        raise RuntimeError("Empty response from Gemini.")
-    return text
+    """Plain-text generation. Tries Gemini first, falls back to local Qwen3."""
+    global _last_method
+    if has_key():
+        try:
+            resp = _generate(prompt, json_mode=False)
+            text = (resp.text or "").strip()
+            if text:
+                _last_method = "gemini"
+                return text
+        except Exception as exc:
+            log.warning("Gemini failed, trying local LLM: %s", exc)
+
+    from core import local_llm
+    if local_llm.is_available():
+        _last_method = "local_llm"
+        return local_llm.generate_text(prompt)
+
+    raise RuntimeError("Both Gemini and local LLM unavailable.")
 
 
 def generate_json(prompt: str) -> dict:
-    """JSON generation. Raises on empty/invalid output or API error."""
-    resp = _generate(prompt, json_mode=True)
-    text = resp.text or ""
-    if not text.strip():
-        raise RuntimeError("Empty response from Gemini.")
-    return json.loads(_strip_fences(text))
+    """JSON generation. Tries Gemini first, falls back to local Qwen3."""
+    global _last_method
+    if has_key():
+        try:
+            resp = _generate(prompt, json_mode=True)
+            text = resp.text or ""
+            if text.strip():
+                _last_method = "gemini"
+                return json.loads(_strip_fences(text))
+        except Exception as exc:
+            log.warning("Gemini JSON failed, trying local LLM: %s", exc)
+
+    from core import local_llm
+    if local_llm.is_available():
+        _last_method = "local_llm"
+        return local_llm.generate_json(prompt)
+
+    raise RuntimeError("Both Gemini and local LLM unavailable.")
 
 
 def generate_json_from_image(prompt: str, image_bytes: bytes, mime_type: str) -> dict:
