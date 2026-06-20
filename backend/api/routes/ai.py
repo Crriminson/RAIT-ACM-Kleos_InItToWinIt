@@ -135,15 +135,16 @@ async def gst_doubt(request: Request, body: GstDoubtRequest) -> dict:
 
     is_hindi = body.lang == "hi"
     prompt = (
-        "You are an expert Indian Chartered Accountant (CA) specializing in GST, "
-        "GSTR-2B reconciliation, CGST Section 16 eligibility and Section 17(5) blocked credits.\n"
-        f'Answer this small-merchant query clearly: "{question}"\n'
-        "Format guidelines:\n"
-        f"- Answer in {'Hindi (Devanagari script, simple everyday words)' if is_hindi else 'simple English'}.\n"
-        "- Use short headings and bullet points so a Class-10-educated shopkeeper can follow.\n"
-        "- Reference CGST sections (16(2), 16(4), 17(5)) only when helpful, explained simply.\n"
-        "- End with a one-sentence recommendation.\n"
-        "- Plain text with light Markdown."
+        "You are a friendly CA (Chartered Accountant) helping a small Indian shopkeeper.\n"
+        f'Question: "{question}"\n\n'
+        "Rules — STRICTLY follow:\n"
+        f"- Answer in {'Hindi (Devanagari, simple everyday words)' if is_hindi else 'simple English'}.\n"
+        "- MAXIMUM 6-8 lines. Be concise. No walls of text.\n"
+        "- Use one concrete ₹ example if it helps, keep it to 2 lines max.\n"
+        "- Mention the CGST section number in parentheses only once if relevant.\n"
+        "- End with one bold actionable recommendation.\n"
+        "- No greetings, no 'Hello', no 'As an expert'. Jump straight into the answer.\n"
+        "- No markdown headers (###). Use bullet points sparingly."
     )
     try:
         answer = gemini.generate_text(prompt)
