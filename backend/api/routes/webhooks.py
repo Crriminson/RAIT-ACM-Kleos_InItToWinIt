@@ -181,20 +181,60 @@ def _extract_message(payload: dict[str, Any]) -> tuple[str, str, str | None, str
 # ── Pipeline (shared by both Meta and legacy payloads) ──────────────────────
 
 async def _run_pipeline(image_bytes: bytes, db: Session) -> str:
-    """Run OCR → Extract → Match → Recommend and return a formatted reply."""
-    invoice_id = str(uuid.uuid4())
+    """Run OCR → Extract → Match → Recommend and return a formatted reply.
+    Tries PaddleOCR first, falls back to Gemini Vision if OCR/extraction fails."""
+    from core import gemini as _gemini
+    from api.routes.analyze_compat import _normalise_vision, _VISION_PROMPT
 
-    # OCR
+    invoice_id = str(uuid.uuid4())
+    extracted = None
+
+    # Try offline OCR first
     try:
         raw_ocr = extract_text(image_bytes)
-    except Exception:
-        return "⚠️ Sorry, we couldn't read the image you sent. Please send a clearer photo of the invoice."
-
-    # Extract
-    try:
         extracted = extract_invoice(raw_ocr)
-    except ExtractionError:
-        return "⚠️ We couldn't find all required fields (like GSTIN or invoice number) in the image. Please ensure the full invoice is visible."
+    except Exception as exc:
+        log.warning("Offline OCR/extract failed in webhook: %s — trying Gemini Vision", exc)
+
+    # Gemini Vision fallback
+    if extracted is None and _gemini.has_key():
+        try:
+            vision_data = _gemini.generate_json_from_image(_VISION_PROMPT, image_bytes, "image/jpeg")
+            norm = _normalise_vision(vision_data)
+            total_tax = float(norm.get("totalTax", 0) or 0)
+            gstin = str(norm.get("supplierGSTIN", "") or "")
+            # Infer tax split from GSTIN state code
+            is_intra = gstin[:2] == "09"  # buyer is in UP (09)
+            from models.extraction import ExtractedInvoice, LineItem
+            items = []
+            for it in (norm.get("items") or []):
+                items.append(LineItem(
+                    description=str(it.get("description", "")),
+                    hsn_code=str(it.get("hsnCode", "")),
+                    quantity=1, unit="NOS",
+                    taxable_value=float(it.get("taxableValue", 0) or 0),
+                    tax_rate=float(it.get("taxRate", 0) or 0),
+                    cgst=float(it.get("taxAmount", 0) or 0) / 2 if is_intra else 0,
+                    sgst=float(it.get("taxAmount", 0) or 0) / 2 if is_intra else 0,
+                    igst=float(it.get("taxAmount", 0) or 0) if not is_intra else 0,
+                ))
+            extracted = ExtractedInvoice(
+                supplier_gstin=gstin,
+                supplier_name=str(norm.get("supplierName", "")),
+                invoice_number=str(norm.get("invoiceNumber", "")),
+                invoice_date=str(norm.get("invoiceDate", "")),
+                taxable_value=float(norm.get("taxableValue", 0) or 0),
+                cgst=total_tax / 2 if is_intra else 0,
+                sgst=total_tax / 2 if is_intra else 0,
+                igst=total_tax if not is_intra else 0,
+                hsn_codes=[it.hsn_code for it in items if it.hsn_code],
+                line_items=items,
+            )
+        except Exception as exc:
+            log.warning("Gemini Vision also failed in webhook: %s", exc)
+
+    if extracted is None:
+        return "⚠️ Sorry, we couldn't read the image you sent. Please send a clearer photo of the invoice."
 
     # Load GSTR-2B
     gstr2b_records = _load_gstr2b(db, None)
